@@ -101,6 +101,17 @@
           <p class="notes-content">{{ record.notes }}</p>
         </div>
 
+        <!-- 检查报告 -->
+        <div v-if="record.attachments && record.attachments.length > 0" class="attachments-card">
+          <h2 class="card-title">检查报告（{{ record.attachments.length }}）</h2>
+          <AttachmentGallery
+            :record-id="recordId"
+            :attachments="record.attachments"
+            @update="fetchRecord"
+            @delete="fetchRecord"
+          />
+        </div>
+
         <!-- 操作按钮 -->
         <div class="actions" v-if="isOwner">
           <el-button
@@ -135,6 +146,7 @@ import { getRecordById, deleteRecord as deleteRecordApi } from '@/api/record';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { formatDate, formatGestationalAge } from '@/utils/date';
+import AttachmentGallery from '@/components/AttachmentGallery.vue';
 
 const router = useRouter();
 const route = useRoute();
