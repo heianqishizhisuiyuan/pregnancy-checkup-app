@@ -9,6 +9,7 @@
         </div>
         <div class="user-section">
           <span class="username">{{ user?.profile?.nickname || user?.username }}</span>
+          <el-button @click="goToTimeline" text icon="Clock">时间轴</el-button>
           <el-button v-if="isOwner" @click="handleSettings" text icon="Setting">设置</el-button>
           <el-button @click="handleLogout" text>退出</el-button>
         </div>
@@ -151,6 +152,10 @@ const handleAddRecord = () => {
 };
 
 // 家庭设置
+const goToTimeline = () => {
+  router.push('/timeline');
+};
+
 const handleSettings = () => {
   router.push({ name: 'FamilyEdit' });
 };
