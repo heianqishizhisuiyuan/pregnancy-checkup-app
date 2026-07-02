@@ -102,14 +102,32 @@
         </div>
 
         <!-- 检查报告 -->
-        <div v-if="record.attachments && record.attachments.length > 0" class="attachments-card">
-          <h2 class="card-title">检查报告（{{ record.attachments.length }}）</h2>
-          <AttachmentGallery
-            :record-id="recordId"
-            :attachments="record.attachments"
-            @update="fetchRecord"
-            @delete="fetchRecord"
-          />
+        <div class="attachments-card">
+          <h2 class="card-title">检查报告（{{ record.attachments?.length || 0 }}）</h2>
+
+          <!-- 上传组件（仅 owner 可见）-->
+          <div v-if="isOwner" class="upload-section">
+            <AttachmentUpload
+              :record-id="recordId"
+              :existing-count="record.attachments?.length || 0"
+              @success="handleUploadSuccess"
+            />
+          </div>
+
+          <!-- 图片画廊 -->
+          <div v-if="record.attachments && record.attachments.length > 0" class="gallery-section">
+            <AttachmentGallery
+              :record-id="recordId"
+              :attachments="record.attachments"
+              @update="fetchRecord"
+              @delete="fetchRecord"
+            />
+          </div>
+
+          <!-- 空状态 -->
+          <div v-else-if="!isOwner" class="empty-attachments">
+            <el-empty description="暂无检查报告" :image-size="80" />
+          </div>
         </div>
 
         <!-- 操作按钮 -->
@@ -147,6 +165,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { formatDate, formatGestationalAge } from '@/utils/date';
 import AttachmentGallery from '@/components/AttachmentGallery.vue';
+import AttachmentUpload from '@/components/AttachmentUpload.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -187,6 +206,12 @@ const loadRecord = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// 上传成功处理
+const handleUploadSuccess = () => {
+  // 重新获取记录以刷新附件列表
+  fetchRecord();
 };
 
 // 编辑
@@ -406,5 +431,25 @@ onMounted(() => {
   border-radius: var(--radius-full);
   font-weight: 500;
   min-width: 120px;
+}
+
+/* 附件区域 */
+.attachments-card {
+  background: var(--color-bg-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  border: 1px solid var(--color-border);
+}
+
+.upload-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.gallery-section {
+  margin-top: var(--spacing-md);
+}
+
+.empty-attachments {
+  padding: var(--spacing-xl) 0;
 }
 </style>
