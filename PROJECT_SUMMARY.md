@@ -16,13 +16,12 @@
 ## ✅ 完成情况统计
 
 ### 总体进度
-- **任务完成**: 30/30 个任务 (100%)
-- **代码文件**: 40 个 Vue/JavaScript 源码与测试文件
-  - 后端: 17 个 JavaScript 文件
-  - 前端: 23 个 Vue/JavaScript 文件
-- **Git 提交**: 17 个功能提交
-- **开发时间**: 约 2 小时
-- **代码质量**: 通过 ESLint 检查，所有注释使用简体中文
+- **任务完成**: MVP + 第二阶段完成
+- **代码文件**: 50+ 个 Vue/JavaScript 源码文件
+  - 后端: 21 个 JavaScript 文件
+  - 前端: 30+ 个 Vue/JavaScript 文件
+- **Git 提交**: 27+ 个功能提交
+- **代码质量**: 通过前端构建检查，所有注释使用简体中文
 
 ---
 
@@ -60,6 +59,24 @@
 - [x] 家庭数据隔离
 - [x] 操作权限验证
 
+### 6. 图片上传和管理 ✓ (第二阶段)
+- [x] 为产检记录上传图片附件（化验单、B超等）
+- [x] 支持 jpg、png、webp 格式
+- [x] 单张最大 10MB，每条记录最多 20 张
+- [x] 图片按分类（B超、血常规等）组织
+- [x] 支持自定义标签
+- [x] 图片放大预览、编辑、删除功能
+- [x] Owner/Family 权限控制
+- [x] 文件存储到本地文件系统
+- [x] 文件访问权限验证
+
+### 7. 时间轴展示 ✓ (第二阶段)
+- [x] 独立的时间轴视图页面
+- [x] 垂直时间线布局
+- [x] 显示图片数量角标
+- [x] 点击跳转到详情页
+- [x] 响应式设计
+
 ---
 
 ## 📁 项目结构
@@ -73,26 +90,30 @@ pregnancy-checkup-app/
 ├── backend/                               # 后端服务
 │   ├── src/
 │   │   ├── config/
-│   │   │   └── db.js                      # MongoDB 连接配置
+│   │   │   ├── db.js                      # MongoDB 连接配置
+│   │   │   └── multer.js                  # 文件上传配置
 │   │   ├── models/
 │   │   │   ├── User.js                    # 用户模型
 │   │   │   ├── Family.js                  # 家庭模型
-│   │   │   └── Record.js                  # 产检记录模型
+│   │   │   └── Record.js                  # 产检记录模型（含附件）
 │   │   ├── utils/
-│   │   │   └── jwt.js                     # JWT 工具函数
+│   │   │   ├── jwt.js                     # JWT 工具函数
+│   │   │   └── fileCleanup.js             # 文件清理工具
 │   │   ├── middlewares/
 │   │   │   ├── auth.js                    # JWT 认证中间件
 │   │   │   ├── roleCheck.js               # 权限检查中间件
+│   │   │   ├── fileAccess.js              # 文件访问权限中间件
 │   │   │   └── errorHandler.js            # 错误处理中间件
 │   │   ├── controllers/
 │   │   │   ├── authController.js          # 认证控制器
-│   │   │   ├── recordController.js        # 记录控制器
+│   │   │   ├── recordController.js        # 记录控制器（含附件）
 │   │   │   └── familyController.js        # 家庭控制器
 │   │   ├── routes/
 │   │   │   ├── auth.js                    # 认证路由
-│   │   │   ├── record.js                  # 记录路由
+│   │   │   ├── record.js                  # 记录路由（含附件）
 │   │   │   └── family.js                  # 家庭路由
 │   │   └── app.js                         # Express 应用
+│   ├── uploads/                           # 上传文件目录
 │   ├── .env                               # 环境变量
 │   ├── .env.example                       # 环境变量模板
 │   ├── package.json                       # 依赖配置
@@ -111,16 +132,27 @@ pregnancy-checkup-app/
 │   │   │   ├── request.js                 # Axios 实例
 │   │   │   ├── auth.js                    # 认证 API
 │   │   │   ├── record.js                  # 记录 API
-│   │   │   └── family.js                  # 家庭 API
+│   │   │   ├── family.js                  # 家庭 API
+│   │   │   └── attachment.js              # 附件 API
 │   │   ├── utils/
 │   │   │   ├── date.js                    # 日期工具
-│   │   │   └── validators.js              # 验证工具
+│   │   │   ├── validators.js              # 验证工具
+│   │   │   └── attachmentCategories.js    # 附件分类常量
+│   │   ├── components/
+│   │   │   ├── RecordCard.vue             # 记录卡片组件
+│   │   │   ├── StatCard.vue               # 统计卡片组件
+│   │   │   ├── VitalInput.vue             # 生理指标输入组件
+│   │   │   ├── AttachmentUpload.vue       # 附件上传组件
+│   │   │   ├── AttachmentGallery.vue      # 附件画廊组件
+│   │   │   └── TimelineItem.vue           # 时间轴项组件
 │   │   ├── views/
 │   │   │   ├── Login.vue                  # 登录页面
 │   │   │   ├── Register.vue               # 注册页面
 │   │   │   ├── Home.vue                   # 首页
 │   │   │   ├── RecordForm.vue             # 记录表单页
-│   │   │   └── RecordDetail.vue           # 记录详情页
+│   │   │   ├── RecordDetail.vue           # 记录详情页
+│   │   │   ├── FamilyEdit.vue             # 家庭编辑页
+│   │   │   └── Timeline.vue               # 时间轴页面
 │   │   ├── components/
 │   │   │   ├── RecordCard.vue             # 记录卡片组件
 │   │   │   ├── StatCard.vue               # 统计卡片组件
