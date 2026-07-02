@@ -6,6 +6,8 @@ import authRoutes from './routes/auth.js';
 import recordRoutes from './routes/record.js';
 import familyRoutes from './routes/family.js';
 import { errorHandler } from './middlewares/errorHandler.js';
+import { authenticate } from './middlewares/auth.js';
+import { checkFileAccess } from './middlewares/fileAccess.js';
 
 const app = express();
 
@@ -31,6 +33,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// 静态文件服务（需要认证和权限验证）
+app.use('/uploads', authenticate, checkFileAccess, express.static('uploads'));
 
 // API 路由
 app.use('/api/auth', authRoutes);
