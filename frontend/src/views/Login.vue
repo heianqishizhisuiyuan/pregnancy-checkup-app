@@ -59,7 +59,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { login as loginApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
-import { validateEmail } from '@/utils/validator';
+import { validateEmail } from '@/utils/validators';
 
 const router = useRouter();
 const authStore = useAuthStore();

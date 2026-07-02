@@ -99,7 +99,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { register as registerApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
-import { validateEmail, validateUsername, validatePassword } from '@/utils/validator';
+import { validateEmail, validateUsername, validatePassword } from '@/utils/validators';
 
 const router = useRouter();
 const authStore = useAuthStore();
