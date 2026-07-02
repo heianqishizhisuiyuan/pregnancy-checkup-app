@@ -46,3 +46,15 @@ export function formatGestationalAge(weeks, days) {
   }
   return `${weeks}周+${days}天`;
 }
+
+/**
+ * 计算距离预产期的天数
+ * @param {Date|string} dueDate - 预产期
+ * @param {Date|string} targetDate - 目标日期，默认为今天
+ * @returns {number} 距离预产期的天数（负数表示已过预产期）
+ */
+export function calculateDaysUntilDue(dueDate, targetDate = new Date()) {
+  const due = dayjs(dueDate);
+  const target = dayjs(targetDate);
+  return due.diff(target, 'day');
+}
