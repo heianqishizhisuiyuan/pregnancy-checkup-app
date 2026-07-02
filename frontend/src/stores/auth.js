@@ -2,8 +2,9 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
-  const user = ref(null);
+  // State - 从 localStorage 恢复用户信息
+  const storedUser = localStorage.getItem('user');
+  const user = ref(storedUser ? JSON.parse(storedUser) : null);
   const token = ref(localStorage.getItem('token') || null);
 
   // Getters
@@ -22,12 +23,18 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setUser(newUser) {
     user.value = newUser;
+    if (newUser) {
+      localStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('user');
+    }
   }
 
   function logout() {
     user.value = null;
     token.value = null;
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
   }
 
   function login(loginData) {
