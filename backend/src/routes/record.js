@@ -6,10 +6,14 @@ import {
   createRecord,
   updateRecord,
   deleteRecord,
+  uploadAttachments,
+  deleteAttachment,
+  updateAttachment,
 } from '../controllers/recordController.js';
 import { authenticate } from '../middlewares/auth.js';
 import { requireOwner } from '../middlewares/roleCheck.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
+import { upload } from '../config/multer.js';
 
 const router = express.Router();
 
@@ -62,5 +66,26 @@ router.put('/:id', requireOwner, updateRecord);
  * @access  Private (Owner only)
  */
 router.delete('/:id', requireOwner, deleteRecord);
+
+/**
+ * @route   POST /api/records/:recordId/attachments
+ * @desc    上传附件
+ * @access  Private (Owner only)
+ */
+router.post('/:recordId/attachments', requireOwner, upload.array('files', 10), uploadAttachments);
+
+/**
+ * @route   DELETE /api/records/:recordId/attachments/:attachmentId
+ * @desc    删除附件
+ * @access  Private (Owner only)
+ */
+router.delete('/:recordId/attachments/:attachmentId', requireOwner, deleteAttachment);
+
+/**
+ * @route   PUT /api/records/:recordId/attachments/:attachmentId
+ * @desc    更新附件信息
+ * @access  Private (Owner only)
+ */
+router.put('/:recordId/attachments/:attachmentId', requireOwner, updateAttachment);
 
 export default router;
