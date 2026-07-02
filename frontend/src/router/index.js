@@ -47,6 +47,12 @@ const routes = [
     component: () => import('@/views/RecordForm.vue'),
     meta: { requiresAuth: true, requiresOwner: true },
   },
+  {
+    path: '/timeline',
+    name: 'Timeline',
+    component: () => import('@/views/Timeline.vue'),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
