@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { ElMessage } from 'element-plus';
 
 const routes = [
   {
@@ -18,6 +20,12 @@ const routes = [
     name: 'Home',
     component: () => import('@/views/Home.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/family/edit',
+    name: 'FamilyEdit',
+    component: () => import('@/views/FamilyEdit.vue'),
+    meta: { requiresAuth: true, requiresOwner: true },
   },
   {
     path: '/record/new',
@@ -51,6 +59,15 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !token) {
     // 需要认证但未登录，跳转到登录页
     next({ name: 'Login', query: { redirect: to.fullPath } });
+  } else if (to.meta.requiresOwner) {
+    // 需要 owner 权限
+    const authStore = useAuthStore();
+    if (!authStore.isOwner) {
+      ElMessage.warning('权限不足，仅主账号可操作');
+      next({ name: 'Home' });
+      return;
+    }
+    next();
   } else if (!to.meta.requiresAuth && token && (to.name === 'Login' || to.name === 'Register')) {
     // 已登录但访问登录/注册页，跳转到首页
     next({ name: 'Home' });

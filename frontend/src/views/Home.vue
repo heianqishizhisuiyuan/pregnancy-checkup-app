@@ -9,6 +9,7 @@
         </div>
         <div class="user-section">
           <span class="username">{{ user?.profile?.nickname || user?.username }}</span>
+          <el-button v-if="isOwner" @click="handleSettings" text icon="Setting">设置</el-button>
           <el-button @click="handleLogout" text>退出</el-button>
         </div>
       </div>
@@ -86,7 +87,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Loading } from '@element-plus/icons-vue';
+import { Plus, Loading, Setting } from '@element-plus/icons-vue';
 import RecordCard from '@/components/RecordCard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
@@ -147,6 +148,11 @@ const loadData = async () => {
 // 添加记录
 const handleAddRecord = () => {
   router.push({ name: 'RecordNew' });
+};
+
+// 家庭设置
+const handleSettings = () => {
+  router.push({ name: 'FamilyEdit' });
 };
 
 // 退出登录
