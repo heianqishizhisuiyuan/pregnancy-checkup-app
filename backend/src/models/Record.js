@@ -86,6 +86,46 @@ const recordSchema = new mongoose.Schema(
       trim: true,
       maxlength: [2000, '备注最多2000个字符'],
     },
+
+    // 附件
+    attachments: [{
+      filename: {
+        type: String,
+        required: true
+      },
+      storedName: {
+        type: String,
+        required: true
+      },
+      path: {
+        type: String,
+        required: true
+      },
+      size: {
+        type: Number,
+        required: true
+      },
+      mimetype: {
+        type: String,
+        required: true
+      },
+      category: {
+        type: String,
+        default: '其他'
+      },
+      tags: [{
+        type: String
+      }],
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      },
+      uploadedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      }
+    }],
   },
   {
     timestamps: true,
