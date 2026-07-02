@@ -9,6 +9,7 @@ import {
 } from '../controllers/recordController.js';
 import { authenticate } from '../middlewares/auth.js';
 import { requireOwner } from '../middlewares/roleCheck.js';
+import { validateRequest } from '../middlewares/validateRequest.js';
 
 const router = express.Router();
 
@@ -44,6 +45,7 @@ router.post(
     body('hospital').trim().notEmpty().withMessage('医院名称不能为空'),
     body('doctor').trim().notEmpty().withMessage('医生姓名不能为空'),
   ],
+  validateRequest,
   createRecord
 );
 

@@ -65,11 +65,11 @@
 | RecordCard.vue | 记录卡片（首页列表） | ✅ 已使用 |
 | StatCard.vue | 统计卡片 | ⚠️ 未使用（内联实现） |
 | VitalInput.vue | 生理指标输入 | ⚠️ 未使用（直接用 el-input） |
-| HelloWorld.vue | 默认示例组件 | ℹ️ 可删除 |
+| HelloWorld.vue | 默认示例组件 | ✅ 已删除 |
 
 **建议**：
 - StatCard 和 VitalInput 组件可以重构使用，或删除以保持代码整洁
-- HelloWorld.vue 是 Vite 默认生成的，可以安全删除
+- HelloWorld.vue 和默认示例资源已删除
 
 ---
 
@@ -189,8 +189,7 @@
 
 ### 改进空间
 1. StatCard 和 VitalInput 组件未使用
-2. HelloWorld.vue 可以删除
-3. 部分页面可以提取更多可复用组件
+2. 部分页面可以提取更多可复用组件
 
 ---
 
