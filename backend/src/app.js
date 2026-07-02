@@ -38,7 +38,7 @@ app.use('/api/records', recordRoutes);
 app.use('/api/family', familyRoutes);
 
 // 404 处理
-app.use((req, res) => {
+app.use((req, res, next) => {
   res.status(404).json({
     success: false,
     error: {
