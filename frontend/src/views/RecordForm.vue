@@ -150,6 +150,34 @@
           />
         </el-form-item>
 
+        <el-divider content-position="left">检查报告</el-divider>
+
+        <el-form-item v-if="!isEditMode" label="待上传图片">
+          <AttachmentUpload
+            mode="queue"
+            :queue-items="pendingAttachments"
+            @queue-change="pendingAttachments = $event"
+          />
+        </el-form-item>
+
+        <template v-else>
+          <el-form-item label="上传图片">
+            <AttachmentUpload
+              mode="upload"
+              :record-id="currentRecordId"
+              :existing-count="recordAttachments.length"
+              @success="loadRecord"
+            />
+          </el-form-item>
+          <AttachmentGallery
+            v-if="recordAttachments.length"
+            :record-id="currentRecordId"
+            :attachments="recordAttachments"
+            @update="loadRecord"
+            @delete="loadRecord"
+          />
+        </template>
+
         <el-form-item>
           <el-button
             type="primary"
@@ -172,8 +200,12 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
+import { uploadAttachmentEntry } from '@/api/attachment';
 import { createRecord, updateRecord, getRecordById } from '@/api/record';
+import AttachmentGallery from '@/components/AttachmentGallery.vue';
+import AttachmentUpload from '@/components/AttachmentUpload.vue';
 import { useRecordStore } from '@/stores/record';
+import { uploadQueuedAttachments } from '@/utils/attachmentQueue';
 
 const router = useRouter();
 const route = useRoute();
@@ -181,6 +213,9 @@ const recordStore = useRecordStore();
 
 const formRef = ref(null);
 const loading = ref(false);
+const pendingAttachments = ref([]);
+const currentRecordId = ref(route.params.id || '');
+const recordAttachments = ref([]);
 
 const isEditMode = computed(() => !!route.params.id);
 
@@ -230,6 +265,8 @@ const loadRecord = async () => {
     const response = await getRecordById(route.params.id);
     if (response.success) {
       const record = response.data;
+      currentRecordId.value = record._id || route.params.id || '';
+      recordAttachments.value = record.attachments || [];
       Object.assign(formData, {
         checkupDate: record.checkupDate,
         gestationalWeek: record.gestationalWeek,
@@ -276,8 +313,22 @@ const handleSubmit = async () => {
       ElMessage.success(isEditMode.value ? '修改成功' : '创建成功');
       if (isEditMode.value) {
         recordStore.updateRecord(route.params.id, response.data);
+        recordAttachments.value = response.data.attachments || recordAttachments.value;
       } else {
         recordStore.addRecord(response.data);
+        currentRecordId.value = response.data._id;
+        const uploadResult = await uploadQueuedAttachments({
+          recordId: currentRecordId.value,
+          queue: pendingAttachments.value,
+          uploader: uploadAttachmentEntry
+        });
+
+        if (uploadResult.failed.length > 0) {
+          ElMessage.warning('记录已创建，但部分检查报告上传失败，可稍后在详情页继续上传');
+        }
+
+        router.push({ name: 'RecordDetail', params: { id: currentRecordId.value } });
+        return;
       }
       router.back();
     }
