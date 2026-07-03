@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createQueuedAttachmentEntry, uploadQueuedAttachments } from './attachmentQueue.js';
+import {
+  appendQueuedAttachmentEntries,
+  createQueuedAttachmentEntry,
+  uploadQueuedAttachments
+} from './attachmentQueue.js';
 
 test('createQueuedAttachmentEntry defaults to category 其他 and queued status', () => {
   const entry = createQueuedAttachmentEntry({
@@ -31,6 +35,34 @@ test('createQueuedAttachmentEntry applies overrides', () => {
       tags: ['12周'],
       status: 'uploaded'
     }
+  );
+});
+
+test('appendQueuedAttachmentEntries accumulates multiple selected files onto the existing queue', () => {
+  const existingQueue = [
+    createQueuedAttachmentEntry(
+      { name: 'existing.png', size: 10, lastModified: 1 },
+      { category: '已有', tags: ['keep'] }
+    )
+  ];
+
+  const nextQueue = appendQueuedAttachmentEntries(
+    existingQueue,
+    [
+      { name: 'first.png', size: 20, lastModified: 2 },
+      { name: 'second.png', size: 30, lastModified: 3 }
+    ],
+    { category: '报告', tags: ['new'] }
+  );
+
+  assert.equal(nextQueue.length, 3);
+  assert.deepEqual(
+    nextQueue.map((entry) => [entry.file.name, entry.category, entry.tags]),
+    [
+      ['existing.png', '已有', ['keep']],
+      ['first.png', '报告', ['new']],
+      ['second.png', '报告', ['new']]
+    ]
   );
 });
 

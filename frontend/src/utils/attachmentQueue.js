@@ -8,6 +8,13 @@ export function createQueuedAttachmentEntry(file, overrides = {}) {
   };
 }
 
+export function appendQueuedAttachmentEntries(queue, files, overrides = {}) {
+  return [
+    ...queue,
+    ...files.map((file) => createQueuedAttachmentEntry(file, overrides))
+  ];
+}
+
 export async function uploadQueuedAttachments({ recordId, queue, uploader }) {
   const succeeded = [];
   const failed = [];

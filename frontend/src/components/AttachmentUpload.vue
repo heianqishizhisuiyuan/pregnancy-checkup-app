@@ -26,11 +26,11 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
-import { createQueuedAttachmentEntry } from '@/utils/attachmentQueue';
+import { appendQueuedAttachmentEntries } from '@/utils/attachmentQueue';
 import { buildAttachmentUploadUrl } from '@/utils/attachmentUrls';
 
 const props = defineProps({
@@ -72,6 +72,14 @@ const emit = defineEmits([
 const authStore = useAuthStore();
 const uploadRef = ref(null);
 const fileList = ref([]);
+const pendingQueueItems = ref(props.queueItems);
+
+watch(
+  () => props.queueItems,
+  (queueItems) => {
+    pendingQueueItems.value = queueItems;
+  }
+);
 
 const maxCount = computed(() => {
   return Math.max(0, 20 - props.existingCount);
@@ -108,16 +116,15 @@ const beforeUpload = (file) => {
   }
 
   if (props.mode === 'queue') {
-    const selectedFiles = [file];
-    const nextQueue = [
-      ...props.queueItems,
-      ...selectedFiles.map((selectedFile) =>
-        createQueuedAttachmentEntry(selectedFile, {
-          category: props.category,
-          tags: [...props.tags]
-        })
-      )
-    ];
+    const nextQueue = appendQueuedAttachmentEntries(
+      pendingQueueItems.value,
+      [file],
+      {
+        category: props.category,
+        tags: [...props.tags]
+      }
+    );
+    pendingQueueItems.value = nextQueue;
     emit('queue-change', nextQueue);
     fileList.value = [];
     return false;
