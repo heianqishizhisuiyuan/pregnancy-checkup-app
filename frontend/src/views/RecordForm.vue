@@ -170,7 +170,6 @@
             />
           </el-form-item>
           <AttachmentGallery
-            v-if="recordAttachments.length"
             :record-id="currentRecordId"
             :attachments="recordAttachments"
             @update="loadRecord"
