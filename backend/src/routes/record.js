@@ -12,6 +12,7 @@ import {
 } from '../controllers/recordController.js';
 import { authenticate } from '../middlewares/auth.js';
 import { requireOwner } from '../middlewares/roleCheck.js';
+import { recordExists } from '../middlewares/recordExists.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
 import { upload } from '../config/multer.js';
 
@@ -72,7 +73,13 @@ router.delete('/:id', requireOwner, deleteRecord);
  * @desc    上传附件
  * @access  Private (Owner only)
  */
-router.post('/:recordId/attachments', requireOwner, upload.array('files', 10), uploadAttachments);
+router.post(
+  '/:recordId/attachments',
+  requireOwner,
+  recordExists,
+  upload.array('files', 10),
+  uploadAttachments
+);
 
 /**
  * @route   DELETE /api/records/:recordId/attachments/:attachmentId

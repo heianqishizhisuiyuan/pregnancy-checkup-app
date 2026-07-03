@@ -119,8 +119,8 @@
             <AttachmentGallery
               :record-id="recordId"
               :attachments="record.attachments"
-              @update="fetchRecord"
-              @delete="fetchRecord"
+              @update="refreshRecord"
+              @delete="refreshRecord"
             />
           </div>
 
@@ -174,6 +174,7 @@ const recordStore = useRecordStore();
 
 const loading = ref(false);
 const record = ref(null);
+const recordId = computed(() => route.params.id);
 
 const isOwner = computed(() => authStore.isOwner);
 
@@ -193,10 +194,10 @@ const hasVitals = computed(() => {
 });
 
 // 加载记录
-const loadRecord = async () => {
+const refreshRecord = async () => {
   loading.value = true;
   try {
-    const response = await getRecordById(route.params.id);
+    const response = await getRecordById(recordId.value);
     if (response.success) {
       record.value = response.data;
     }
@@ -211,7 +212,7 @@ const loadRecord = async () => {
 // 上传成功处理
 const handleUploadSuccess = () => {
   // 重新获取记录以刷新附件列表
-  fetchRecord();
+  refreshRecord();
 };
 
 // 编辑
@@ -252,7 +253,7 @@ const handleBack = () => {
 };
 
 onMounted(() => {
-  loadRecord();
+  refreshRecord();
 });
 </script>
 
