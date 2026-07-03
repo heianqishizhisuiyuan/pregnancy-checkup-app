@@ -1,5 +1,12 @@
 import express from 'express';
-import { getFamily, updateFamily, getInviteCode, regenerateInviteCode, getMembers } from '../controllers/familyController.js';
+import {
+  getFamily,
+  updateFamily,
+  getInviteCode,
+  regenerateInviteCode,
+  getMembers,
+  removeMember,
+} from '../controllers/familyController.js';
 import { authenticate } from '../middlewares/auth.js';
 
 const router = express.Router();
@@ -41,5 +48,12 @@ router.get('/members', getMembers);
  * @access  Private (Owner only)
  */
 router.put('/', updateFamily);
+
+/**
+ * @route   DELETE /api/family/members/:userId
+ * @desc    移除家庭成员
+ * @access  Private (Owner only)
+ */
+router.delete('/members/:userId', removeMember);
 
 export default router;

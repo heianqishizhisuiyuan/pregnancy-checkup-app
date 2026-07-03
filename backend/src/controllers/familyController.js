@@ -1,4 +1,5 @@
 import Family from '../models/Family.js';
+import User from '../models/User.js';
 import { ensureFamilyInviteCode, generateInviteCode } from '../utils/inviteCode.js';
 
 /**
@@ -194,6 +195,64 @@ export const getMembers = async (req, res, next) => {
     res.json({
       success: true,
       data: family.members,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 移除家庭成员
+ * DELETE /api/family/members/:userId
+ */
+export const removeMember = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const family = await Family.findById(req.user.familyId);
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '家庭不存在' },
+      });
+    }
+
+    if (family.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: '只有主账号可以移除成员' },
+      });
+    }
+
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: '不能移除自己' },
+      });
+    }
+
+    const member = family.members.find((m) => m.userId.toString() === userId);
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '成员不存在' },
+      });
+    }
+
+    if (member.role === 'owner') {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: '不能移除主账号' },
+      });
+    }
+
+    family.members = family.members.filter((m) => m.userId.toString() !== userId);
+    await family.save();
+    await User.findByIdAndDelete(userId);
+
+    res.json({
+      success: true,
+      data: { removedUserId: userId },
     });
   } catch (error) {
     next(error);

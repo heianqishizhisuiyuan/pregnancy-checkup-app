@@ -37,6 +37,12 @@
     <div class="footer" v-if="record.createdBy">
       <span class="creator">记录人：{{ record.createdBy.profile?.nickname || record.createdBy.username }}</span>
     </div>
+
+    <RecordCardThumbnails
+      v-if="previewAttachments.length"
+      :attachments="previewAttachments"
+      :total-count="attachmentCount"
+    />
   </div>
 </template>
 
@@ -44,6 +50,7 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Location, Picture } from '@element-plus/icons-vue';
+import RecordCardThumbnails from '@/components/RecordCardThumbnails.vue';
 import { formatDate, formatGestationalAge } from '@/utils/date';
 
 const props = defineProps({
@@ -80,6 +87,8 @@ const hasVitals = computed(() => {
 const attachmentCount = computed(() => {
   return props.record.attachmentCount ?? props.record.attachments?.length ?? 0;
 });
+
+const previewAttachments = computed(() => props.record.previewAttachments || []);
 
 const handleClick = () => {
   router.push({ name: 'RecordDetail', params: { id: props.record._id } });

@@ -43,6 +43,7 @@ export function buildVitalChartSeries(records) {
   const systolic = [];
   const diastolic = [];
   const fundalHeight = [];
+  const abdominalCircumference = [];
   const fetalHeartRate = [];
 
   sorted.forEach((record) => {
@@ -56,10 +57,20 @@ export function buildVitalChartSeries(records) {
     systolic.push(vitals.bloodPressure?.systolic ?? null);
     diastolic.push(vitals.bloodPressure?.diastolic ?? null);
     fundalHeight.push(vitals.fundalHeight ?? null);
+    abdominalCircumference.push(vitals.abdominalCircumference ?? null);
     fetalHeartRate.push(vitals.fetalHeartRate ?? null);
   });
 
-  return { labels, meta, weight, systolic, diastolic, fundalHeight, fetalHeartRate };
+  return {
+    labels,
+    meta,
+    weight,
+    systolic,
+    diastolic,
+    fundalHeight,
+    abdominalCircumference,
+    fetalHeartRate,
+  };
 }
 
 /**

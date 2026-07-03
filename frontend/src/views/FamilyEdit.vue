@@ -3,7 +3,7 @@
     <div class="edit-card">
       <div class="card-header">
         <el-button @click="handleBack" text :icon="ArrowLeft">返回</el-button>
-        <h1 class="title">家庭信息设置</h1>
+        <h1 class="title">家庭设置</h1>
       </div>
 
       <el-form
@@ -52,6 +52,28 @@
           </div>
         </el-form-item>
 
+        <el-form-item label="下次产检" prop="nextCheckupDate">
+          <el-date-picker
+            v-model="formData.nextCheckupDate"
+            type="date"
+            placeholder="选择下次产检日期"
+            style="width: 100%"
+          />
+          <div class="form-tip">
+            设置后首页将显示提醒，并可开启浏览器通知
+          </div>
+        </el-form-item>
+
+        <el-form-item label="提前提醒" prop="reminderDaysBefore">
+          <el-select v-model="formData.reminderDaysBefore" style="width: 100%">
+            <el-option label="当天" :value="0" />
+            <el-option label="提前 1 天" :value="1" />
+            <el-option label="提前 2 天" :value="2" />
+            <el-option label="提前 3 天" :value="3" />
+            <el-option label="提前 7 天" :value="7" />
+          </el-select>
+        </el-form-item>
+
         <el-form-item v-if="currentGestationalAge" class="info-item">
           <div class="info-card">
             <div class="info-row">
@@ -86,9 +108,21 @@
               <span class="member-name">
                 {{ member.userId?.profile?.nickname || member.userId?.username || '未知用户' }}
               </span>
-              <el-tag size="small" :type="member.role === 'owner' ? 'warning' : 'info'">
-                {{ member.role === 'owner' ? '主账号' : '家人' }}
-              </el-tag>
+              <div class="member-actions">
+                <el-tag size="small" :type="member.role === 'owner' ? 'warning' : 'info'">
+                  {{ member.role === 'owner' ? '主账号' : '家人' }}
+                </el-tag>
+                <el-button
+                  v-if="member.role !== 'owner'"
+                  type="danger"
+                  text
+                  size="small"
+                  :loading="removingId === (member.userId?._id || member.userId)"
+                  @click="handleRemoveMember(member)"
+                >
+                  移除
+                </el-button>
+              </div>
             </div>
           </div>
         </el-form-item>
@@ -114,10 +148,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { ArrowLeft, CopyDocument } from '@element-plus/icons-vue';
 import { useFamilyStore } from '@/stores/family';
-import { getFamily, updateFamily, getInviteCode, regenerateInviteCode, getMembers } from '@/api/family';
+import { getFamily, updateFamily, getInviteCode, regenerateInviteCode, getMembers, removeMember } from '@/api/family';
 import { calculateGestationalAge, calculateDaysUntilDue, formatGestationalAge } from '@/utils/date';
 import dayjs from 'dayjs';
 
@@ -129,12 +163,15 @@ const loading = ref(false);
 const inviteLoading = ref(false);
 const inviteCode = ref('');
 const members = ref([]);
+const removingId = ref(null);
 const originalData = ref(null);
 
 const formData = reactive({
   name: '',
   lastPeriod: null,
   dueDate: null,
+  nextCheckupDate: null,
+  reminderDaysBefore: 1,
 });
 
 const rules = {
@@ -197,6 +234,10 @@ const loadData = async () => {
       formData.dueDate = familyRes.data.pregnancyInfo?.dueDate
         ? new Date(familyRes.data.pregnancyInfo.dueDate)
         : null;
+      formData.nextCheckupDate = familyRes.data.pregnancyInfo?.nextCheckupDate
+        ? new Date(familyRes.data.pregnancyInfo.nextCheckupDate)
+        : null;
+      formData.reminderDaysBefore = familyRes.data.pregnancyInfo?.reminderDaysBefore ?? 1;
     }
 
     if (inviteRes.success) {
@@ -240,6 +281,37 @@ const handleRegenerateInvite = async () => {
   }
 };
 
+const handleRemoveMember = async (member) => {
+  const userId = member.userId?._id || member.userId;
+  const name = member.userId?.profile?.nickname || member.userId?.username || '该成员';
+
+  try {
+    await ElMessageBox.confirm(
+      `确定移除「${name}」吗？移除后该账号将无法再访问家庭记录。`,
+      '移除成员',
+      { confirmButtonText: '移除', cancelButtonText: '取消', type: 'warning' }
+    );
+  } catch {
+    return;
+  }
+
+  removingId.value = userId;
+  try {
+    const res = await removeMember(userId);
+    if (res.success) {
+      members.value = members.value.filter(
+        (m) => (m.userId?._id || m.userId) !== userId
+      );
+      ElMessage.success('成员已移除');
+    }
+  } catch (error) {
+    console.error('Failed to remove member:', error);
+    ElMessage.error('移除失败');
+  } finally {
+    removingId.value = null;
+  }
+};
+
 // 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return;
@@ -257,6 +329,10 @@ const handleSubmit = async () => {
       pregnancyInfo: {
         lastPeriod: formData.lastPeriod ? dayjs(formData.lastPeriod).format('YYYY-MM-DD') : undefined,
         dueDate: formData.dueDate ? dayjs(formData.dueDate).format('YYYY-MM-DD') : undefined,
+        nextCheckupDate: formData.nextCheckupDate
+          ? dayjs(formData.nextCheckupDate).format('YYYY-MM-DD')
+          : null,
+        reminderDaysBefore: formData.reminderDaysBefore,
       },
     };
 
@@ -393,5 +469,11 @@ onMounted(() => {
 .member-name {
   font-size: 0.9rem;
   color: var(--color-text-primary);
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 </style>

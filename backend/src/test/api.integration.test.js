@@ -28,6 +28,7 @@ describe('API integration', () => {
   let inviteCode;
   let recordId;
   let familyToken;
+  let familyUserId;
 
   before(async () => {
     process.env.NODE_ENV = 'test';
@@ -126,6 +127,7 @@ describe('API integration', () => {
     assert.equal(res.body.success, true);
     assert.equal(res.body.data.user.role, 'family');
     familyToken = res.body.data.token;
+    familyUserId = res.body.data.user._id;
   });
 
   it('blocks family member from creating records', async () => {
@@ -145,6 +147,20 @@ describe('API integration', () => {
       .expect(200);
 
     assert.equal(res.body.data._id, recordId);
+  });
+
+  it('allows owner to remove family member', async () => {
+    const res = await request(app)
+      .delete(`/api/family/members/${familyUserId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    assert.equal(res.body.success, true);
+
+    await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${familyToken}`)
+      .expect(401);
   });
 
   it('updates and deletes record as owner', async () => {

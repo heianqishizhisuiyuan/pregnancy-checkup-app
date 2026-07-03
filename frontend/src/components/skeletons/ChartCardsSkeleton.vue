@@ -13,7 +13,7 @@
 
 <script setup>
 defineProps({
-  count: { type: Number, default: 4 },
+  count: { type: Number, default: 5 },
 });
 </script>
 

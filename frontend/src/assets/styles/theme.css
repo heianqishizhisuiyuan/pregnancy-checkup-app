@@ -31,6 +31,18 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* 底部导航栏高度（含安全区由组件自行叠加） */
+  --tab-bar-height: 56px;
+
+  /* Element Plus 主色（与 accent 一致，避免 plain/link 按钮出现默认蓝） */
+  --el-color-primary: #C4612F;
+  --el-color-primary-light-3: #d4845f;
+  --el-color-primary-light-5: #e5a990;
+  --el-color-primary-light-7: #f0cdb8;
+  --el-color-primary-light-8: #f5ddd0;
+  --el-color-primary-light-9: #F2E3D6;
+  --el-color-primary-dark-2: #A94E22;
 }
 
 /* 全局样式重置 */
@@ -59,5 +71,18 @@ body {
 
 .el-button--primary:hover {
   background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.el-button--primary.is-plain {
+  color: var(--color-accent);
+  background-color: #fff;
+  border-color: var(--color-accent);
+}
+
+.el-button--primary.is-plain:hover,
+.el-button--primary.is-plain:focus {
+  color: var(--color-accent-hover);
+  background-color: var(--color-accent-light);
   border-color: var(--color-accent-hover);
 }

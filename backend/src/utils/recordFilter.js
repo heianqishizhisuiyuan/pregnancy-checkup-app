@@ -49,8 +49,17 @@ export function buildRecordFilter(familyId, query = {}) {
  */
 export function slimRecordForList(record) {
   const obj = record.toObject ? record.toObject() : { ...record };
-  const attachmentCount = obj.attachments?.length || 0;
+  const attachments = obj.attachments || [];
+  obj.attachmentCount = attachments.length;
+  // 列表预览：最多返回前 2 张图片的路径信息
+  obj.previewAttachments = attachments
+    .filter((a) => a.mimetype?.startsWith('image/'))
+    .slice(0, 2)
+    .map((a) => ({
+      _id: a._id,
+      path: a.path,
+      mimetype: a.mimetype,
+    }));
   delete obj.attachments;
-  obj.attachmentCount = attachmentCount;
   return obj;
 }

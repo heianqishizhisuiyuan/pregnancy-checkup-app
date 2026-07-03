@@ -2,8 +2,13 @@
   <div class="profile-container">
     <div class="profile-card">
       <div class="card-header">
-        <el-button @click="handleBack" text :icon="ArrowLeft">返回</el-button>
-        <h1 class="title">账号设置</h1>
+        <h1 class="title">我的</h1>
+      </div>
+
+      <div v-if="isOwner" class="quick-links">
+        <el-button type="primary" plain @click="goToFamilySettings">
+          家庭设置与产检提醒
+        </el-button>
       </div>
 
       <el-form
@@ -78,10 +83,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { updateProfile, updatePassword } from '@/api/auth';
 
@@ -92,6 +96,7 @@ const profileFormRef = ref(null);
 const passwordFormRef = ref(null);
 const profileLoading = ref(false);
 const passwordLoading = ref(false);
+const isOwner = computed(() => authStore.isOwner);
 
 const profileForm = reactive({
   nickname: '',
@@ -130,8 +135,8 @@ const passwordRules = {
   ],
 };
 
-const handleBack = () => {
-  router.push('/');
+const goToFamilySettings = () => {
+  router.push({ name: 'FamilyEdit' });
 };
 
 const handleSaveProfile = async () => {
@@ -184,7 +189,6 @@ onMounted(() => {
 
 <style scoped>
 .profile-container {
-  min-height: 100vh;
   background: var(--color-bg-primary, #F7F4EF);
   padding: var(--spacing-lg, 24px);
 }
@@ -199,17 +203,18 @@ onMounted(() => {
 }
 
 .card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
   color: var(--color-text-primary, #1F2421);
+}
+
+.quick-links {
+  margin-bottom: 20px;
 }
 
 .profile-form {

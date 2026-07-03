@@ -53,6 +53,16 @@ describe('buildAxisLabelShowIndexes', () => {
   });
 });
 
+describe('buildVitalChartSeries abdominal', () => {
+  it('extracts abdominal circumference series', () => {
+    const result = buildVitalChartSeries([
+      { checkupDate: '2026-04-01', gestationalWeek: 12, gestationalDay: 0, vitals: { abdominalCircumference: 82 } },
+    ]);
+
+    assert.equal(result.abdominalCircumference[0], 82);
+  });
+});
+
 describe('recordsToRows', () => {
   it('maps record fields to export columns', () => {
     const rows = recordsToRows([

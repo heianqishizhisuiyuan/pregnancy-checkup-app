@@ -1,34 +1,5 @@
 <template>
   <div class="home-container">
-    <!-- 顶部导航栏 -->
-    <header class="navbar">
-      <div class="navbar-content">
-        <div class="logo-section">
-          <span class="logo">💝</span>
-          <span class="app-name">孕期记录</span>
-        </div>
-        <div class="user-section">
-          <span class="username">{{ user?.profile?.nickname || user?.username }}</span>
-          <el-button @click="goToTrends" text :icon="TrendCharts">
-            <span class="nav-label">趋势</span>
-          </el-button>
-          <el-button @click="goToTimeline" text :icon="Clock">
-            <span class="nav-label">时间轴</span>
-          </el-button>
-          <el-button @click="goToProfile" text :icon="User">
-            <span class="nav-label">账号</span>
-          </el-button>
-          <el-button v-if="isOwner" @click="handleSettings" text :icon="Setting">
-            <span class="nav-label">设置</span>
-          </el-button>
-          <el-button @click="handleLogout" text>
-            <span class="nav-label">退出</span>
-          </el-button>
-        </div>
-      </div>
-    </header>
-
-    <!-- 主内容区 -->
     <main class="main-content">
       <!-- 快速统计卡片 -->
       <StatsCardsSkeleton v-if="loading" />
@@ -64,6 +35,19 @@
         </div>
       </div>
 
+      <CheckupReminderCard
+        v-if="!loading"
+        :next-checkup-date="familyStore.nextCheckupDate"
+        :reminder-days-before="familyStore.reminderDaysBefore"
+        :is-owner="isOwner"
+      />
+
+      <PregnancySetupBanner
+        v-if="!loading"
+        :has-last-period="!!familyStore.lastPeriod"
+        :is-owner="isOwner"
+      />
+
       <!-- 记录列表 -->
       <div class="records-section">
         <div class="section-header">
@@ -86,7 +70,8 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
-                  <el-dropdown-item command="pdf">导出 PDF（打印）</el-dropdown-item>
+                  <el-dropdown-item command="pdf-download">导出 PDF（下载）</el-dropdown-item>
+                  <el-dropdown-item command="pdf-print">导出 PDF（打印）</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -103,6 +88,7 @@
           </div>
           <p class="empty-text">{{ hasActiveFilter ? '没有符合条件的记录' : '还没有产检记录' }}</p>
           <p v-if="!hasActiveFilter && isOwner" class="empty-hint">点击右下角按钮添加第一条记录</p>
+          <p v-else-if="!hasActiveFilter && !isOwner" class="empty-hint">您为只读家人，请联系主账号添加记录</p>
         </div>
 
         <div v-else class="records-list">
@@ -147,13 +133,15 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import {
-  Plus, Setting, Clock, Female, Calendar, Document,
-  TrendCharts, Download, Filter, ArrowUp, User,
+  Plus, Female, Calendar, Document,
+  Download, Filter, ArrowUp,
 } from '@element-plus/icons-vue';
 import RecordCard from '@/components/RecordCard.vue';
 import RecordFilterBar from '@/components/RecordFilterBar.vue';
+import CheckupReminderCard from '@/components/CheckupReminderCard.vue';
+import PregnancySetupBanner from '@/components/PregnancySetupBanner.vue';
 import StatsCardsSkeleton from '@/components/skeletons/StatsCardsSkeleton.vue';
 import RecordListSkeleton from '@/components/skeletons/RecordListSkeleton.vue';
 import { useAuthStore } from '@/stores/auth';
@@ -178,7 +166,6 @@ const currentPage = ref(1);
 const pageSize = ref(20);
 const totalRecords = ref(0);
 
-const user = computed(() => authStore.user);
 const isOwner = computed(() => authStore.isOwner);
 const records = computed(() => recordStore.records);
 
@@ -280,7 +267,11 @@ const handleExport = async (command) => {
     if (command === 'excel') {
       exportRecordsToExcel(exportData, filename);
       ElMessage.success('Excel 导出成功');
-    } else if (command === 'pdf') {
+    } else if (command === 'pdf-download') {
+      const { exportRecordsToPdfDownload } = await import('@/utils/exportRecordsPdf.js');
+      await exportRecordsToPdfDownload(exportData, { title: '产检记录', familyName, filename });
+      ElMessage.success('PDF 下载成功');
+    } else if (command === 'pdf-print') {
       exportRecordsToPdf(exportData, { title: '产检记录', familyName });
     }
   } catch (error) {
@@ -291,38 +282,6 @@ const handleExport = async (command) => {
 
 const handleAddRecord = () => {
   router.push({ name: 'RecordNew' });
-};
-
-const goToTrends = () => {
-  router.push({ name: 'Trends' });
-};
-
-const goToTimeline = () => {
-  router.push('/timeline');
-};
-
-const goToProfile = () => {
-  router.push({ name: 'Profile' });
-};
-
-const handleSettings = () => {
-  router.push({ name: 'FamilyEdit' });
-};
-
-const handleLogout = async () => {
-  try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    });
-
-    authStore.logout();
-    ElMessage.success('已退出登录');
-    router.push({ name: 'Login' });
-  } catch {
-    // 用户取消
-  }
 };
 
 let narrowMediaQuery;
@@ -348,60 +307,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .home-container {
-  min-height: 100vh;
   background: var(--color-bg-primary);
-}
-
-.navbar {
-  background: var(--color-bg-white);
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-}
-
-.navbar-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--spacing-md) var(--spacing-lg);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.logo {
-  font-size: 1.5rem;
-}
-
-.app-name {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.user-section {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.user-section :deep(.el-button) {
-  padding: 2px 6px;
-  margin-left: 0;
-}
-
-.username {
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
 }
 
 .main-content {
@@ -543,37 +449,18 @@ onBeforeUnmount(() => {
 
 .fab {
   position: fixed;
-  bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--tab-bar-height) + var(--spacing-md) + env(safe-area-inset-bottom, 0px));
   right: calc(var(--spacing-xl) + env(safe-area-inset-right, 0px));
   width: 56px;
   height: 56px;
   box-shadow: var(--shadow-lg);
   font-size: 1.5rem;
+  z-index: 150;
 }
 
 @media (max-width: 640px) {
-  .navbar-content {
-    padding: var(--spacing-sm) var(--spacing-md);
-  }
-
-  .app-name {
-    font-size: 1.1rem;
-  }
-
-  .username {
-    max-width: 72px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .nav-label {
-    display: none;
-  }
-
   .main-content {
     padding: var(--spacing-lg) var(--spacing-md);
-    padding-bottom: calc(var(--spacing-xl) + 56px + env(safe-area-inset-bottom, 0px));
   }
 
   .records-section {
@@ -581,7 +468,7 @@ onBeforeUnmount(() => {
   }
 
   .fab {
-    bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--tab-bar-height) + var(--spacing-sm) + env(safe-area-inset-bottom, 0px));
     right: calc(var(--spacing-lg) + env(safe-area-inset-right, 0px));
   }
 }

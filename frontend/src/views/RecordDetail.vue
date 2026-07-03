@@ -13,6 +13,15 @@
       <RecordDetailSkeleton v-if="loading" />
 
       <div v-else-if="record" class="record-detail">
+        <el-alert
+          v-if="!isOwner"
+          type="info"
+          :closable="false"
+          show-icon
+          class="readonly-alert"
+          title="您为只读家人，可查看记录但无法编辑"
+        />
+
         <!-- 基本信息卡片 -->
         <div class="info-card">
           <div class="card-header">
@@ -41,7 +50,13 @@
 
         <!-- 生理指标卡片 -->
         <div class="vitals-card">
-          <h2 class="card-title">生理指标</h2>
+          <div class="vitals-card-header">
+            <h2 class="card-title">生理指标</h2>
+            <el-button text type="primary" @click="goToTrends">
+              <el-icon><TrendCharts /></el-icon>
+              查看趋势
+            </el-button>
+          </div>
           <div class="vitals-grid">
             <div class="vital-item" v-if="record.vitals?.weight">
               <div class="vital-icon">
@@ -190,6 +205,10 @@ const hasVitals = computed(() => {
          vitals.fetalHeartRate;
 });
 
+const goToTrends = () => {
+  router.push({ name: 'Trends' });
+};
+
 // 加载记录
 const refreshRecord = async () => {
   loading.value = true;
@@ -283,7 +302,11 @@ onMounted(() => {
 .record-detail {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-lg);
+}
+
+.readonly-alert {
+  margin-bottom: 0;
 }
 
 /* 卡片通用样式 */
@@ -307,7 +330,18 @@ onMounted(() => {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--color-text-primary);
+  margin-bottom: 0;
+}
+
+.vitals-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--spacing-lg);
+}
+
+.vitals-card-header .card-title {
+  margin-bottom: 0;
 }
 
 .badge {

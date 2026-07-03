@@ -1,7 +1,6 @@
 <template>
   <div class="trends-page">
     <header class="page-header">
-      <el-button @click="goBack" text :icon="ArrowLeft">返回</el-button>
       <div class="header-text">
         <h1>数据趋势</h1>
         <p v-if="records.length > 0" class="header-hint">
@@ -32,6 +31,10 @@
         <div ref="fundalChartRef" class="chart-body"></div>
       </section>
       <section class="chart-card">
+        <h2 class="chart-title">腹围变化</h2>
+        <div ref="abdominalChartRef" class="chart-body"></div>
+      </section>
+      <section class="chart-card">
         <h2 class="chart-title">胎心率变化</h2>
         <div ref="fhrChartRef" class="chart-body"></div>
       </section>
@@ -43,7 +46,6 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 import { getRecords } from '@/api/record';
 import { buildVitalChartSeries, buildLineChartOption } from '@/utils/chartData';
@@ -56,6 +58,7 @@ const records = ref([]);
 const weightChartRef = ref(null);
 const bpChartRef = ref(null);
 const fundalChartRef = ref(null);
+const abdominalChartRef = ref(null);
 const fhrChartRef = ref(null);
 
 const chartInstances = [];
@@ -64,7 +67,7 @@ const renderCharts = () => {
   chartInstances.forEach((chart) => chart.dispose());
   chartInstances.length = 0;
 
-  const { labels, meta, weight, systolic, diastolic, fundalHeight, fetalHeartRate } =
+  const { labels, meta, weight, systolic, diastolic, fundalHeight, abdominalCircumference, fetalHeartRate } =
     buildVitalChartSeries(records.value);
 
   const configs = [
@@ -98,6 +101,16 @@ const renderCharts = () => {
         meta,
         yAxisName: 'cm',
         series: [{ name: '宫高', data: fundalHeight }],
+      }),
+    },
+    {
+      el: abdominalChartRef.value,
+      option: buildLineChartOption({
+        labels,
+        meta,
+        yAxisName: 'cm',
+        color: '#8A918C',
+        series: [{ name: '腹围', data: abdominalCircumference }],
       }),
     },
     {

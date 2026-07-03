@@ -1,21 +1,17 @@
 <template>
   <div class="timeline-page">
     <header class="page-header">
-      <el-button @click="goBack" text :icon="ArrowLeft">返回</el-button>
       <div class="header-text">
         <h1>产检时间轴</h1>
-        <p v-if="records.length > 0" class="header-hint">共 {{ records.length }} 次产检</p>
+        <p v-if="!loading && records.length > 0" class="header-hint">共 {{ records.length }} 次产检</p>
       </div>
     </header>
 
-    <div v-if="loading" class="loading">
-      <el-icon class="is-loading"><Loading /></el-icon>
-      加载中...
-    </div>
+    <TimelineListSkeleton v-if="loading" />
 
     <div v-else-if="records.length === 0" class="empty">
-      <el-empty description="还没有产检记录">
-        <el-button type="primary" @click="goToAddRecord">
+      <el-empty :description="emptyDescription">
+        <el-button v-if="isOwner" type="primary" @click="goToAddRecord">
           添加第一条记录
         </el-button>
       </el-empty>
@@ -35,16 +31,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowLeft, Loading } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import TimelineItem from '@/components/TimelineItem.vue';
+import TimelineListSkeleton from '@/components/skeletons/TimelineListSkeleton.vue';
 import { getRecords } from '@/api/record';
 import { useRecordStore } from '@/stores/record';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const recordStore = useRecordStore();
+const authStore = useAuthStore();
 const loading = ref(true);
 const records = computed(() => recordStore.records);
+const isOwner = computed(() => authStore.isOwner);
+
+const emptyDescription = computed(() => (
+  isOwner.value ? '还没有产检记录' : '还没有产检记录，请联系主账号添加'
+));
 
 const fetchRecords = async () => {
   if (recordStore.records.length > 0) {
@@ -64,10 +67,6 @@ const fetchRecords = async () => {
   }
 };
 
-const goBack = () => {
-  router.push('/');
-};
-
 const goToDetail = (recordId) => {
   router.push(`/record/${recordId}`);
 };
@@ -83,38 +82,32 @@ onMounted(() => {
 
 <style scoped>
 .timeline-page {
-  min-height: 100vh;
-  background: #F7F4EF;
-  padding: 24px;
+  background: var(--color-bg-primary);
+  padding: var(--spacing-lg);
 }
 
 .page-header {
   max-width: 800px;
-  margin: 0 auto 24px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  margin: 0 auto var(--spacing-lg);
 }
 
 .header-text h1 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1F2421;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .header-hint {
   margin: 4px 0 0;
   font-size: 0.875rem;
-  color: #6B7280;
+  color: var(--color-text-secondary);
 }
 
-.loading,
 .empty {
   max-width: 800px;
-  margin: 48px auto;
+  margin: var(--spacing-xl) auto;
   text-align: center;
-  color: #6B7280;
 }
 
 .timeline-container {
@@ -124,11 +117,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .timeline-page {
-    padding: 16px;
-  }
-
-  .header-text h1 {
-    font-size: 1.25rem;
+    padding: var(--spacing-md);
   }
 }
 </style>

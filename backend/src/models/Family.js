@@ -40,6 +40,16 @@ const familySchema = new mongoose.Schema(
         type: Date,
         required: false,
       },
+      nextCheckupDate: {
+        type: Date,
+        required: false,
+      },
+      reminderDaysBefore: {
+        type: Number,
+        default: 1,
+        min: 0,
+        max: 7,
+      },
     },
     inviteCode: {
       type: String,
@@ -54,10 +64,9 @@ const familySchema = new mongoose.Schema(
   }
 );
 
-// 添加索引
+// 添加索引（inviteCode 已通过字段 unique + sparse 自动建索引）
 familySchema.index({ ownerId: 1 });
 familySchema.index({ 'members.userId': 1 });
-familySchema.index({ inviteCode: 1 });
 
 const Family = mongoose.model('Family', familySchema);
 

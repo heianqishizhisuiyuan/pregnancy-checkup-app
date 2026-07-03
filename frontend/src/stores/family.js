@@ -33,6 +33,10 @@ export const useFamilyStore = defineStore('family', () => {
     return { weeks, days, totalDays: diffDays };
   });
 
+  const nextCheckupDate = computed(() => family.value?.pregnancyInfo?.nextCheckupDate ?? null);
+
+  const reminderDaysBefore = computed(() => family.value?.pregnancyInfo?.reminderDaysBefore ?? 1);
+
   // Actions
   function setFamily(newFamily) {
     family.value = newFamily;
@@ -49,6 +53,8 @@ export const useFamilyStore = defineStore('family', () => {
     lastPeriod,
     daysUntilDue,
     currentGestationalAge,
+    nextCheckupDate,
+    reminderDaysBefore,
     setFamily,
     setLoading,
   };

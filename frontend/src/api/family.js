@@ -50,3 +50,13 @@ export function getMembers() {
     method: 'get',
   });
 }
+
+/**
+ * 移除家庭成员
+ */
+export function removeMember(userId) {
+  return request({
+    url: `/family/members/${userId}`,
+    method: 'delete',
+  });
+}

@@ -1,17 +1,23 @@
 <template>
-  <router-view />
+  <AppLayout v-if="useLayout">
+    <router-view />
+  </AppLayout>
+  <router-view v-else />
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { getCurrentUser } from '@/api/auth';
+import AppLayout from '@/components/AppLayout.vue';
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
-// 应用启动时获取用户信息
+const useLayout = computed(() => route.meta.layout === true);
+
 onMounted(async () => {
   if (authStore.token) {
     try {

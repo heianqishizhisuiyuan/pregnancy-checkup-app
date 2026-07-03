@@ -33,9 +33,9 @@ export function exportRecordsToExcel(records, filename = '产检记录') {
 }
 
 /**
- * 导出 PDF（通过打印对话框，支持中文）
+ * 构建 PDF 导出 HTML
  */
-export function exportRecordsToPdf(records, options = {}) {
+export function buildRecordsPdfHtml(records, options = {}) {
   const { title = '产检记录', familyName = '' } = options;
   const rows = recordsToRows(records);
 
@@ -57,19 +57,18 @@ export function exportRecordsToPdf(records, options = {}) {
     )
     .join('');
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <title>${title}</title>
   <style>
-    body { font-family: "Microsoft YaHei", sans-serif; padding: 24px; color: #1F2421; }
+    body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; padding: 24px; color: #1F2421; font-size: 12px; }
     h1 { font-size: 20px; margin-bottom: 8px; }
     .meta { color: #5C635D; font-size: 13px; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #E7E1D7; padding: 8px; text-align: left; }
     th { background: #F7F4EF; }
-    @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
@@ -84,14 +83,21 @@ export function exportRecordsToPdf(records, options = {}) {
     </thead>
     <tbody>${tableRows}</tbody>
   </table>
-  <script>window.onload = () => { window.print(); };</script>
 </body>
 </html>`;
+}
+
+/**
+ * 导出 PDF（通过打印对话框，支持中文）
+ */
+export function exportRecordsToPdf(records, options = {}) {
+  const html = buildRecordsPdfHtml(records, options);
+  const printHtml = html.replace('</body>', '  <script>window.onload = () => { window.print(); }<\/script>\n</body>');
 
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     throw new Error('无法打开打印窗口，请允许弹出窗口');
   }
-  printWindow.document.write(html);
+  printWindow.document.write(printHtml);
   printWindow.document.close();
 }
