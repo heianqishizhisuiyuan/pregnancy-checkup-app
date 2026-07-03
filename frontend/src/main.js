@@ -8,15 +8,9 @@ import 'element-plus/dist/index.css';
 import './assets/styles/theme.css';
 import App from './App.vue';
 import router from './router';
+import { initPwaUpdate } from './composables/usePwaUpdate.js';
 
-// 生产环境注册 Service Worker（由 vite-plugin-pwa 生成 sw.js）
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // 离线能力不可用时静默失败
-    });
-  });
-}
+initPwaUpdate();
 
 import { initTheme } from './composables/useTheme.js';
 

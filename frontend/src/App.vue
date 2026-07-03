@@ -1,4 +1,5 @@
 <template>
+  <PwaUpdateBanner />
   <OfflineBanner />
   <AppLayout v-if="useLayout">
     <router-view v-slot="{ Component }">
@@ -21,6 +22,7 @@ import { useAuthStore } from '@/stores/auth';
 import { getCurrentUser } from '@/api/auth';
 import AppLayout from '@/components/AppLayout.vue';
 import OfflineBanner from '@/components/OfflineBanner.vue';
+import PwaUpdateBanner from '@/components/PwaUpdateBanner.vue';
 import { buildLoginQuery } from '@/utils/redirect';
 
 const route = useRoute();
