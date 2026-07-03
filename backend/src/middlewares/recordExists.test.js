@@ -62,3 +62,42 @@ test('recordExists middleware calls next when record exists', async () => {
 
   assert.equal(nextCalled, true);
 });
+
+test('recordExists middleware returns upload failure when recordId lookup throws CastError', async () => {
+  const middleware = createRecordExistsMiddleware({
+    findRecord: async () => {
+      const error = new Error('Cast to ObjectId failed');
+      error.name = 'CastError';
+      throw error;
+    }
+  });
+
+  let statusCode = 200;
+  let payload = null;
+  let nextCalled = false;
+
+  const req = {
+    params: { recordId: 'bad-record-id' },
+    user: { familyId: 'family-1' }
+  };
+  const res = {
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(data) {
+      payload = data;
+      return this;
+    }
+  };
+
+  await middleware(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(statusCode, 500);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error.code, 'UPLOAD_FAILED');
+  assert.equal(payload.error.message, '上传附件失败');
+  assert.equal(nextCalled, false);
+});
