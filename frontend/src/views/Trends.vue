@@ -110,14 +110,18 @@ const loadRecords = async () => {
     const res = await getRecords();
     if (res.success) {
       records.value = res.data;
-      await nextTick();
-      renderCharts();
     }
   } catch (error) {
     console.error('Failed to load records for trends:', error);
     ElMessage.error('加载记录失败');
   } finally {
     loading.value = false;
+  }
+
+  // 等 loading 结束、图表容器挂载后再初始化 ECharts
+  if (records.value.length > 0) {
+    await nextTick();
+    renderCharts();
   }
 };
 

@@ -58,9 +58,18 @@
           <h2 class="section-title">产检记录</h2>
           <div class="section-actions">
             <span class="record-count">
-              {{ hasActiveFilter ? `筛选结果 ${records.length} 条` : `共 ${records.length} 条记录` }}
+              {{ recordCountText }}
             </span>
-            <el-dropdown v-if="records.length" trigger="click" @command="handleExport">
+            <el-tooltip :content="filterExpanded ? '收起筛选' : '筛选'" placement="top">
+              <el-badge :value="activeFilterCount" :hidden="activeFilterCount === 0" :max="9">
+                <el-button
+                  text
+                  :icon="filterExpanded ? ArrowUp : Filter"
+                  @click="filterExpanded = !filterExpanded"
+                />
+              </el-badge>
+            </el-tooltip>
+            <el-dropdown v-if="totalRecords > 0" trigger="click" @command="handleExport">
               <el-button text :icon="Download">导出</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -72,7 +81,7 @@
           </div>
         </div>
 
-        <RecordFilterBar v-model="filters" @search="handleSearch" />
+        <RecordFilterBar v-model="filters" v-model:expanded="filterExpanded" @search="handleSearch" />
 
         <div v-if="loading" class="loading">
           <el-icon class="is-loading"><Loading /></el-icon>
@@ -92,7 +101,20 @@
             v-for="(record, index) in records"
             :key="record._id"
             :record="record"
-            :is-latest="!hasActiveFilter && index === 0"
+            :is-latest="!hasActiveFilter && currentPage === 1 && index === 0"
+          />
+        </div>
+
+        <div v-if="totalRecords > pageSize" class="pagination-wrap">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="totalRecords"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            background
+            @current-change="handlePageChange"
+            @size-change="handlePageSizeChange"
           />
         </div>
       </div>
@@ -118,7 +140,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   Plus, Loading, Setting, Clock, Female, Calendar, Document,
-  TrendCharts, Download,
+  TrendCharts, Download, Filter, ArrowUp,
 } from '@element-plus/icons-vue';
 import RecordCard from '@/components/RecordCard.vue';
 import RecordFilterBar from '@/components/RecordFilterBar.vue';
@@ -137,13 +159,26 @@ const familyStore = useFamilyStore();
 
 const loading = ref(false);
 const filters = ref({});
+const filterExpanded = ref(false);
 const totalRecordCount = ref(0);
+const currentPage = ref(1);
+const pageSize = ref(20);
+const totalRecords = ref(0);
 
 const user = computed(() => authStore.user);
 const isOwner = computed(() => authStore.isOwner);
 const records = computed(() => recordStore.records);
 
 const hasActiveFilter = computed(() => Object.keys(filters.value).length > 0);
+
+const activeFilterCount = computed(() => Object.keys(filters.value).length);
+
+const recordCountText = computed(() => {
+  if (hasActiveFilter.value) {
+    return `筛选结果 ${totalRecords.value} 条`;
+  }
+  return `共 ${totalRecords.value} 条记录`;
+});
 
 const gestationalAgeText = computed(() => {
   const age = familyStore.currentGestationalAge;
@@ -158,12 +193,17 @@ const daysUntilDueText = computed(() => {
   return `${days} 天`;
 });
 
-const loadRecords = async (params = {}) => {
+const loadRecords = async (params = {}, page = currentPage.value) => {
   loading.value = true;
   try {
-    const recordsRes = await getRecords(params);
+    const recordsRes = await getRecords({
+      ...params,
+      page,
+      limit: pageSize.value,
+    });
     if (recordsRes.success) {
       recordStore.setRecords(recordsRes.data);
+      totalRecords.value = recordsRes.pagination?.total ?? recordsRes.data.length;
     }
   } catch (error) {
     console.error('Failed to load records:', error);
@@ -176,14 +216,15 @@ const loadRecords = async (params = {}) => {
 const loadData = async () => {
   loading.value = true;
   try {
-    const [allRecordsRes, familyRes] = await Promise.all([
-      getRecords(),
+    const [recordsRes, familyRes] = await Promise.all([
+      getRecords({ page: currentPage.value, limit: pageSize.value }),
       getFamily(),
     ]);
 
-    if (allRecordsRes.success) {
-      recordStore.setRecords(allRecordsRes.data);
-      totalRecordCount.value = allRecordsRes.data.length;
+    if (recordsRes.success) {
+      recordStore.setRecords(recordsRes.data);
+      totalRecords.value = recordsRes.pagination?.total ?? recordsRes.data.length;
+      totalRecordCount.value = totalRecords.value;
     }
 
     if (familyRes.success) {
@@ -198,19 +239,32 @@ const loadData = async () => {
 };
 
 const handleSearch = (params) => {
-  loadRecords(params);
+  currentPage.value = 1;
+  loadRecords(params, 1);
 };
 
-const handleExport = (command) => {
+const handlePageChange = (page) => {
+  loadRecords(filters.value, page);
+};
+
+const handlePageSizeChange = () => {
+  currentPage.value = 1;
+  loadRecords(filters.value, 1);
+};
+
+const handleExport = async (command) => {
   const familyName = familyStore.family?.name || '';
   const filename = `产检记录_${new Date().toISOString().slice(0, 10)}`;
 
   try {
+    const exportRes = await getRecords(filters.value);
+    const exportData = exportRes.success ? exportRes.data : records.value;
+
     if (command === 'excel') {
-      exportRecordsToExcel(records.value, filename);
+      exportRecordsToExcel(exportData, filename);
       ElMessage.success('Excel 导出成功');
     } else if (command === 'pdf') {
-      exportRecordsToPdf(records.value, { title: '产检记录', familyName });
+      exportRecordsToPdf(exportData, { title: '产检记录', familyName });
     }
   } catch (error) {
     console.error('Export failed:', error);
@@ -298,9 +352,14 @@ onMounted(() => {
 .user-section {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 4px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.user-section :deep(.el-button) {
+  padding: 2px 6px;
+  margin-left: 0;
 }
 
 .username {
@@ -384,7 +443,12 @@ onMounted(() => {
 .section-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 4px;
+}
+
+.section-actions :deep(.el-button) {
+  padding: 2px 6px;
+  margin-left: 0;
 }
 
 .record-count {
@@ -430,6 +494,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
 }
 
 .fab {

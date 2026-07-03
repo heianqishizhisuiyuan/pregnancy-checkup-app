@@ -1,62 +1,78 @@
 <template>
-  <div class="filter-bar">
-    <el-input
-      v-model="localFilters.keyword"
-      placeholder="搜索医院、医生、备注..."
-      clearable
-      :prefix-icon="Search"
-      class="filter-keyword"
-      @keyup.enter="emitSearch"
-    />
-
-    <el-input
-      v-model="localFilters.hospital"
-      placeholder="医院"
-      clearable
-      class="filter-item"
-      @keyup.enter="emitSearch"
-    />
-
-    <el-date-picker
-      v-model="dateRange"
-      type="daterange"
-      range-separator="至"
-      start-placeholder="开始日期"
-      end-placeholder="结束日期"
-      value-format="YYYY-MM-DD"
-      class="filter-date"
-      @change="handleDateChange"
-    />
-
-    <div class="week-range">
-      <el-input-number
-        v-model="localFilters.minWeek"
-        :min="0"
-        :max="45"
-        placeholder="最小孕周"
-        controls-position="right"
-        class="filter-week"
-      />
-      <span class="week-sep">-</span>
-      <el-input-number
-        v-model="localFilters.maxWeek"
-        :min="0"
-        :max="45"
-        placeholder="最大孕周"
-        controls-position="right"
-        class="filter-week"
-      />
+  <div v-if="showBar" class="filter-section">
+    <div v-if="!expanded && activeTags.length" class="filter-tags">
+      <el-tag
+        v-for="tag in activeTags"
+        :key="tag.key"
+        size="small"
+        type="info"
+        closable
+        @close="clearFilter(tag.key)"
+      >
+        {{ tag.label }}
+      </el-tag>
     </div>
 
-    <div class="filter-actions">
-      <el-button type="primary" :icon="Search" @click="emitSearch">搜索</el-button>
-      <el-button @click="handleReset">重置</el-button>
-    </div>
+    <el-collapse-transition>
+      <div v-show="expanded" class="filter-panel">
+        <div class="filter-row filter-row--keyword">
+          <el-input
+            v-model="localFilters.keyword"
+            placeholder="搜索医院、医生、备注..."
+            clearable
+            :prefix-icon="Search"
+            @keyup.enter="emitSearch"
+          />
+        </div>
+
+        <div class="filter-row filter-row--fields">
+          <el-input
+            v-model="localFilters.hospital"
+            placeholder="医院"
+            clearable
+            @keyup.enter="emitSearch"
+          />
+
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            @change="handleDateChange"
+          />
+
+          <div class="week-range">
+            <el-input-number
+              v-model="localFilters.minWeek"
+              :min="0"
+              :max="45"
+              placeholder="最小孕周"
+              controls-position="right"
+            />
+            <span class="week-sep">-</span>
+            <el-input-number
+              v-model="localFilters.maxWeek"
+              :min="0"
+              :max="45"
+              placeholder="最大孕周"
+              controls-position="right"
+            />
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <el-button type="primary" :icon="Search" @click="emitSearch">搜索</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </div>
+      </div>
+    </el-collapse-transition>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { Search } from '@element-plus/icons-vue';
 
 const props = defineProps({
@@ -65,6 +81,8 @@ const props = defineProps({
     default: () => ({}),
   },
 });
+
+const expanded = defineModel('expanded', { default: false });
 
 const emit = defineEmits(['update:modelValue', 'search']);
 
@@ -99,6 +117,31 @@ watch(
   { immediate: true, deep: true }
 );
 
+const activeTags = computed(() => {
+  const tags = [];
+  if (localFilters.keyword?.trim()) {
+    tags.push({ key: 'keyword', label: `关键词: ${localFilters.keyword.trim()}` });
+  }
+  if (localFilters.hospital?.trim()) {
+    tags.push({ key: 'hospital', label: `医院: ${localFilters.hospital.trim()}` });
+  }
+  if (localFilters.startDate && localFilters.endDate) {
+    tags.push({
+      key: 'dateRange',
+      label: `日期: ${localFilters.startDate} ~ ${localFilters.endDate}`,
+    });
+  }
+  if (localFilters.minWeek !== null && localFilters.minWeek !== '') {
+    tags.push({ key: 'minWeek', label: `最小孕周: ${localFilters.minWeek}` });
+  }
+  if (localFilters.maxWeek !== null && localFilters.maxWeek !== '') {
+    tags.push({ key: 'maxWeek', label: `最大孕周: ${localFilters.maxWeek}` });
+  }
+  return tags;
+});
+
+const showBar = computed(() => expanded.value || activeTags.value.length > 0);
+
 const buildParams = () => {
   const params = {};
   if (localFilters.keyword?.trim()) params.keyword = localFilters.keyword.trim();
@@ -125,6 +168,18 @@ const handleDateChange = (val) => {
   localFilters.endDate = val?.[1] || '';
 };
 
+const clearFilter = (key) => {
+  if (key === 'keyword') localFilters.keyword = '';
+  else if (key === 'hospital') localFilters.hospital = '';
+  else if (key === 'dateRange') {
+    localFilters.startDate = '';
+    localFilters.endDate = '';
+    dateRange.value = null;
+  } else if (key === 'minWeek') localFilters.minWeek = null;
+  else if (key === 'maxWeek') localFilters.maxWeek = null;
+  emitSearch();
+};
+
 const handleReset = () => {
   localFilters.keyword = '';
   localFilters.hospital = '';
@@ -138,28 +193,34 @@ const handleReset = () => {
 </script>
 
 <style scoped>
-.filter-bar {
+.filter-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.filter-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  align-items: center;
-  margin-bottom: var(--spacing-lg);
+  gap: var(--spacing-xs);
+}
+
+.filter-panel {
   padding: var(--spacing-md);
   background: var(--color-bg-surface);
   border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
-.filter-keyword {
-  flex: 1;
-  min-width: 180px;
+.filter-row--keyword {
+  width: 100%;
 }
 
-.filter-item {
-  width: 140px;
-}
-
-.filter-date {
-  width: 260px;
+.filter-row--fields {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(240px, 2fr) minmax(200px, 1.5fr);
+  gap: var(--spacing-sm);
+  align-items: center;
 }
 
 .week-range {
@@ -168,36 +229,25 @@ const handleReset = () => {
   gap: var(--spacing-xs);
 }
 
-.filter-week {
-  width: 120px;
+.week-range .el-input-number {
+  flex: 1;
+  min-width: 0;
 }
 
 .week-sep {
   color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .filter-actions {
   display: flex;
+  justify-content: flex-end;
   gap: var(--spacing-xs);
-  margin-left: auto;
 }
 
 @media (max-width: 768px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-keyword,
-  .filter-item,
-  .filter-date,
-  .filter-week {
-    width: 100%;
-  }
-
-  .filter-actions {
-    margin-left: 0;
-    justify-content: flex-end;
+  .filter-row--fields {
+    grid-template-columns: 1fr;
   }
 }
 </style>

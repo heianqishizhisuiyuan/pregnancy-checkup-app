@@ -1,8 +1,8 @@
 import request from './request';
 
 /**
- * 获取所有记录（支持筛选）
- * @param {Object} params - keyword, hospital, startDate, endDate, minWeek, maxWeek
+ * 获取记录列表（支持筛选与分页）
+ * @param {Object} params - keyword, hospital, startDate, endDate, minWeek, maxWeek, page, limit
  */
 export function getRecords(params = {}) {
   return request({

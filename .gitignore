@@ -55,3 +55,4 @@ ecosystem.config.js
 
 scripts/ssh-key-2026-03-07.key
 .history/*
+backend/uploads/*

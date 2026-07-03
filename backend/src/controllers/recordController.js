@@ -5,24 +5,53 @@ import { normalizeUploadedFilename, normalizeRecordAttachments } from '../utils/
 import { buildRecordFilter, slimRecordForList } from '../utils/recordFilter.js';
 import path from 'path';
 
+const mapRecordsForList = (records) =>
+  records.map((record) => {
+    const normalized = normalizeRecordAttachments(record);
+    return slimRecordForList(normalized);
+  });
+
 /**
- * 获取当前家庭的所有记录（支持筛选）
- * GET /api/records?keyword=&hospital=&startDate=&endDate=&minWeek=&maxWeek=
+ * 获取当前家庭的所有记录（支持筛选与分页）
+ * GET /api/records?keyword=&hospital=&startDate=&endDate=&minWeek=&maxWeek=&page=&limit=
+ * 传入 page 或 limit 时启用分页（默认 page=1, limit=20）；不传则返回全部（供趋势/时间轴等使用）
  */
 export const getRecords = async (req, res, next) => {
   try {
     const filter = buildRecordFilter(req.user.familyId, req.query);
+    const isPaginated = req.query.page !== undefined || req.query.limit !== undefined;
 
-    const records = await Record.find(filter)
+    const query = Record.find(filter)
       .sort({ checkupDate: -1 })
       .populate('createdBy', 'username profile.nickname');
 
+    if (isPaginated) {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+      const skip = (page - 1) * limit;
+
+      const [records, total] = await Promise.all([
+        query.skip(skip).limit(limit),
+        Record.countDocuments(filter),
+      ]);
+
+      return res.json({
+        success: true,
+        data: mapRecordsForList(records),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 0,
+        },
+      });
+    }
+
+    const records = await query;
+
     res.json({
       success: true,
-      data: records.map((record) => {
-        const normalized = normalizeRecordAttachments(record);
-        return slimRecordForList(normalized);
-      }),
+      data: mapRecordsForList(records),
     });
   } catch (error) {
     next(error);
