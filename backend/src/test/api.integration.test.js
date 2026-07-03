@@ -140,6 +140,66 @@ describe('API integration', () => {
     assert.equal(res.body.error.code, 'FORBIDDEN');
   });
 
+  it('allows owner to grant edit permission to family member', async () => {
+    const res = await request(app)
+      .put(`/api/family/members/${familyUserId}/permissions`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ canEdit: true })
+      .expect(200);
+
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.canEdit, true);
+  });
+
+  it('blocks family member from changing permissions', async () => {
+    const res = await request(app)
+      .put(`/api/family/members/${familyUserId}/permissions`)
+      .set('Authorization', `Bearer ${familyToken}`)
+      .send({ canEdit: false })
+      .expect(403);
+
+    assert.equal(res.body.error.code, 'FORBIDDEN');
+  });
+
+  it('allows family member with canEdit to create records after re-login', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'family@test.com', password: 'pass123' })
+      .expect(200);
+
+    familyToken = loginRes.body.data.token;
+    assert.equal(loginRes.body.data.user.canEdit, true);
+
+    const res = await request(app)
+      .post('/api/records')
+      .set('Authorization', `Bearer ${familyToken}`)
+      .send({ ...recordPayload, hospital: '家人录入医院' })
+      .expect(201);
+
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.hospital, '家人录入医院');
+  });
+
+  it('allows family member with canEdit to update family info', async () => {
+    const res = await request(app)
+      .put('/api/family')
+      .set('Authorization', `Bearer ${familyToken}`)
+      .send({ name: '我们的家庭' })
+      .expect(200);
+
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.data.name, '我们的家庭');
+  });
+
+  it('blocks family member from viewing invite code', async () => {
+    const res = await request(app)
+      .get('/api/family/invite')
+      .set('Authorization', `Bearer ${familyToken}`)
+      .expect(403);
+
+    assert.equal(res.body.error.code, 'FORBIDDEN');
+  });
+
   it('allows family member to read records', async () => {
     const res = await request(app)
       .get(`/api/records/${recordId}`)

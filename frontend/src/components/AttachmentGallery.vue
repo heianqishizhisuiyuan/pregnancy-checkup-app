@@ -165,7 +165,7 @@ const previewUrls = ref({});
 const loadingIds = ref(new Set());
 
 const categories = ATTACHMENT_CATEGORIES;
-const canEdit = computed(() => !props.readonly && authStore.user?.role === 'owner');
+const canEdit = computed(() => !props.readonly && authStore.canEdit);
 
 const attachmentMap = computed(() => {
   const map = new Map();

@@ -45,6 +45,7 @@ export const register = async (req, res, next) => {
         email,
         password,
         role: 'family',
+        canEdit: false,
         familyId: family._id,
         profile: {
           nickname: nickname || username,
@@ -86,6 +87,7 @@ export const register = async (req, res, next) => {
       email,
       password,
       role: 'owner',
+      canEdit: true,
       familyId: family._id,
       profile: {
         nickname: nickname || username,

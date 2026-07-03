@@ -6,6 +6,7 @@ import {
   regenerateInviteCode,
   getMembers,
   removeMember,
+  updateMemberPermissions,
 } from '../controllers/familyController.js';
 import { authenticate } from '../middlewares/auth.js';
 
@@ -48,6 +49,13 @@ router.get('/members', getMembers);
  * @access  Private (Owner only)
  */
 router.put('/', updateFamily);
+
+/**
+ * @route   PUT /api/family/members/:userId/permissions
+ * @desc    更新家庭成员编辑权限
+ * @access  Private (Owner only)
+ */
+router.put('/members/:userId/permissions', updateMemberPermissions);
 
 /**
  * @route   DELETE /api/family/members/:userId

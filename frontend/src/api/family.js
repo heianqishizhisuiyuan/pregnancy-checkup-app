@@ -60,3 +60,14 @@ export function removeMember(userId) {
     method: 'delete',
   });
 }
+
+/**
+ * 更新家庭成员编辑权限
+ */
+export function updateMemberPermissions(userId, canEdit) {
+  return request({
+    url: `/family/members/${userId}/permissions`,
+    method: 'put',
+    data: { canEdit },
+  });
+}

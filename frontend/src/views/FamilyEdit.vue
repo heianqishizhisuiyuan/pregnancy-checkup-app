@@ -87,31 +87,39 @@
           </div>
         </el-form-item>
 
-        <el-divider content-position="left">
+        <el-divider v-if="isOwner" content-position="left">
           <span class="divider-text">家人邀请</span>
         </el-divider>
 
-        <el-form-item label="邀请码">
+        <el-form-item v-if="isOwner" label="邀请码">
           <div class="invite-row">
             <el-input :model-value="inviteCode" readonly class="invite-code-input" />
             <el-button @click="handleCopyInvite" :icon="CopyDocument">复制</el-button>
             <el-button @click="handleRegenerateInvite" :loading="inviteLoading">重新生成</el-button>
           </div>
           <div class="form-tip">
-            家人注册时选择「加入家庭」并输入此邀请码，即可查看产检记录（只读）
+            家人注册时选择「加入家庭」并输入此邀请码；主账号可在下方为成员开启编辑权限
           </div>
         </el-form-item>
 
-        <el-form-item v-if="members.length" label="家庭成员">
+        <el-form-item v-if="isOwner && members.length" label="家庭成员">
           <div class="members-list">
             <div v-for="member in members" :key="member.userId?._id || member.userId" class="member-item">
               <span class="member-name">
                 {{ member.userId?.profile?.nickname || member.userId?.username || '未知用户' }}
               </span>
               <div class="member-actions">
-                <el-tag size="small" :type="member.role === 'owner' ? 'warning' : 'info'">
-                  {{ member.role === 'owner' ? '主账号' : '家人' }}
+                <el-tag size="small" :type="getMemberTagType(member)">
+                  {{ getMemberRoleLabel(member) }}
                 </el-tag>
+                <el-switch
+                  v-if="member.role !== 'owner'"
+                  :model-value="!!member.userId?.canEdit"
+                  :loading="updatingPermissionId === (member.userId?._id || member.userId)"
+                  active-text="允许编辑"
+                  inline-prompt
+                  @change="(value) => handleTogglePermission(member, value)"
+                />
                 <el-button
                   v-if="member.role !== 'owner'"
                   type="danger"
@@ -151,12 +159,16 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { ArrowLeft, CopyDocument } from '@element-plus/icons-vue';
 import { useFamilyStore } from '@/stores/family';
-import { getFamily, updateFamily, getInviteCode, regenerateInviteCode, getMembers, removeMember } from '@/api/family';
+import { useAuthStore } from '@/stores/auth';
+import { getFamily, updateFamily, getInviteCode, regenerateInviteCode, getMembers, removeMember, updateMemberPermissions } from '@/api/family';
 import { calculateGestationalAge, calculateDaysUntilDue, formatGestationalAge } from '@/utils/date';
 import dayjs from 'dayjs';
 
 const router = useRouter();
 const familyStore = useFamilyStore();
+const authStore = useAuthStore();
+
+const isOwner = computed(() => authStore.isOwner);
 
 const formRef = ref(null);
 const loading = ref(false);
@@ -164,6 +176,7 @@ const inviteLoading = ref(false);
 const inviteCode = ref('');
 const members = ref([]);
 const removingId = ref(null);
+const updatingPermissionId = ref(null);
 const originalData = ref(null);
 
 const formData = reactive({
@@ -215,15 +228,29 @@ const disabledDateDue = (date) => {
   return date < new Date();
 };
 
+function getMemberRoleLabel(member) {
+  if (member.role === 'owner') return '主账号';
+  if (member.userId?.canEdit) return '可编辑家人';
+  return '只读家人';
+}
+
+function getMemberTagType(member) {
+  if (member.role === 'owner') return 'warning';
+  if (member.userId?.canEdit) return 'success';
+  return 'info';
+}
+
 // 加载数据
 const loadData = async () => {
   loading.value = true;
   try {
-    const [familyRes, inviteRes, membersRes] = await Promise.all([
-      getFamily(),
-      getInviteCode(),
-      getMembers(),
-    ]);
+    const requests = [getFamily()];
+    if (isOwner.value) {
+      requests.push(getInviteCode(), getMembers());
+    }
+
+    const results = await Promise.all(requests);
+    const familyRes = results[0];
 
     if (familyRes.success && familyRes.data) {
       originalData.value = familyRes.data;
@@ -240,18 +267,43 @@ const loadData = async () => {
       formData.reminderDaysBefore = familyRes.data.pregnancyInfo?.reminderDaysBefore ?? 1;
     }
 
-    if (inviteRes.success) {
-      inviteCode.value = inviteRes.data.inviteCode;
-    }
+    if (isOwner.value) {
+      const inviteRes = results[1];
+      const membersRes = results[2];
 
-    if (membersRes.success) {
-      members.value = membersRes.data;
+      if (inviteRes?.success) {
+        inviteCode.value = inviteRes.data.inviteCode;
+      }
+
+      if (membersRes?.success) {
+        members.value = membersRes.data;
+      }
     }
   } catch (error) {
     console.error('Failed to load family data:', error);
     ElMessage.error('加载家庭信息失败');
   } finally {
     loading.value = false;
+  }
+};
+
+const handleTogglePermission = async (member, canEdit) => {
+  const userId = member.userId?._id || member.userId;
+  updatingPermissionId.value = userId;
+
+  try {
+    const res = await updateMemberPermissions(userId, canEdit);
+    if (res.success) {
+      if (member.userId && typeof member.userId === 'object') {
+        member.userId.canEdit = canEdit;
+      }
+      ElMessage.success(canEdit ? '已开启编辑权限' : '已关闭编辑权限');
+    }
+  } catch (error) {
+    console.error('Failed to update member permission:', error);
+    ElMessage.error('更新权限失败');
+  } finally {
+    updatingPermissionId.value = null;
   }
 };
 
@@ -474,6 +526,8 @@ onMounted(() => {
 .member-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 </style>

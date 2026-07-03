@@ -14,7 +14,7 @@
 
       <div v-else-if="record" class="record-detail">
         <el-alert
-          v-if="!isOwner"
+          v-if="!canEdit"
           type="info"
           :closable="false"
           show-icon
@@ -175,7 +175,7 @@
         </div>
 
         <!-- 操作按钮 -->
-        <div class="actions" v-if="isOwner">
+        <div class="actions" v-if="canEdit">
           <el-button
             type="primary"
             size="large"
@@ -244,7 +244,7 @@ const sameWeekRecords = computed(() => {
   );
 });
 
-const isOwner = computed(() => authStore.isOwner);
+const canEdit = computed(() => authStore.canEdit);
 
 const formatGestational = computed(() => {
   if (!record.value) return '';

@@ -50,13 +50,13 @@ export const updateFamily = async (req, res, next) => {
       });
     }
 
-    // 只允许 owner 更新家庭信息
-    if (family.ownerId.toString() !== req.user._id.toString()) {
+    // 需要编辑权限（主账号或被授权的家人）
+    if (req.user.role !== 'owner' && !req.user.canEdit) {
       return res.status(403).json({
         success: false,
         error: {
           code: 'FORBIDDEN',
-          message: '只有创建者可以更新家庭信息',
+          message: '权限不足，需要编辑权限',
         },
       });
     }
@@ -180,7 +180,7 @@ export const regenerateInviteCode = async (req, res, next) => {
 export const getMembers = async (req, res, next) => {
   try {
     const family = await Family.findById(req.user.familyId)
-      .populate('members.userId', 'username email profile.nickname role');
+      .populate('members.userId', 'username email profile.nickname role canEdit');
 
     if (!family) {
       return res.status(404).json({
@@ -253,6 +253,80 @@ export const removeMember = async (req, res, next) => {
     res.json({
       success: true,
       data: { removedUserId: userId },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 更新家庭成员编辑权限
+ * PUT /api/family/members/:userId/permissions
+ */
+export const updateMemberPermissions = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { canEdit } = req.body;
+
+    if (typeof canEdit !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'canEdit 必须为布尔值' },
+      });
+    }
+
+    const family = await Family.findById(req.user.familyId);
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '家庭不存在' },
+      });
+    }
+
+    if (family.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: '只有主账号可以配置成员权限' },
+      });
+    }
+
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: '不能修改自己的权限' },
+      });
+    }
+
+    const member = family.members.find((m) => m.userId.toString() === userId);
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '成员不存在' },
+      });
+    }
+
+    if (member.role === 'owner') {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: '不能修改主账号权限' },
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || user.familyId.toString() !== family._id.toString()) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: '成员不存在' },
+      });
+    }
+
+    user.canEdit = canEdit;
+    await user.save();
+
+    res.json({
+      success: true,
+      data: { userId, canEdit },
     });
   } catch (error) {
     next(error);

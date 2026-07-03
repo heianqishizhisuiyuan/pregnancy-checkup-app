@@ -9,7 +9,7 @@
       <p v-else-if="scheduleSuggestion" class="reminder-message suggestion">
         建议下次产检：{{ scheduleSuggestion.dateText }}（{{ scheduleSuggestion.label }}）
       </p>
-      <p v-else-if="isOwner" class="reminder-message muted">
+      <p v-else-if="canEdit" class="reminder-message muted">
         尚未设置下次产检日期，可在家庭设置中填写
       </p>
       <p v-else class="reminder-message muted">主账号可在家庭设置中设置下次产检日期</p>
@@ -32,7 +32,7 @@
             添加到日历
           </button>
           <button
-            v-if="isOwner && isTodayOrPast"
+            v-if="canEdit && isTodayOrPast"
             type="button"
             class="notify-btn accent"
             @click="showSetNextDialog = true"
@@ -43,7 +43,7 @@
       </div>
     </div>
     <el-button
-      v-if="isOwner"
+      v-if="canEdit"
       text
       class="reminder-settings"
       @click="goToFamilySettings"
@@ -106,7 +106,7 @@ const props = defineProps({
     type: Number,
     default: 1,
   },
-  isOwner: {
+  canEdit: {
     type: Boolean,
     default: false,
   },

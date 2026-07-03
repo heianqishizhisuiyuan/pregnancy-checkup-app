@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   // Getters
   const isAuthenticated = computed(() => !!token.value);
   const isOwner = computed(() => user.value?.role === 'owner');
+  const canEdit = computed(() => isOwner.value || user.value?.canEdit === true);
 
   // Actions
   function setToken(newToken) {
@@ -47,6 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isAuthenticated,
     isOwner,
+    canEdit,
     setToken,
     setUser,
     logout,

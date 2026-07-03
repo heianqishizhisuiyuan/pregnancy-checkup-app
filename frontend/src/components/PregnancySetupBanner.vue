@@ -19,7 +19,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  isOwner: {
+  canEdit: {
     type: Boolean,
     default: false,
   },
@@ -30,7 +30,7 @@ const dismissed = ref(false);
 
 const DISMISS_KEY = 'pregnancy_setup_banner_dismissed';
 
-const visible = computed(() => props.isOwner && !props.hasLastPeriod && !dismissed.value);
+const visible = computed(() => props.canEdit && !props.hasLastPeriod && !dismissed.value);
 
 const goToSettings = () => {
   router.push({ name: 'FamilyEdit' });

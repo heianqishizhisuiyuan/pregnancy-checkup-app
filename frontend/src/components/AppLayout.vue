@@ -12,7 +12,7 @@
             <UserAvatar :name="displayName" size="sm" />
             <span class="username">{{ displayName }}</span>
           </div>
-          <el-tag v-if="!isOwner" size="small" type="info" class="role-tag hide-mobile">只读家人</el-tag>
+          <el-tag v-if="!canEdit" size="small" type="info" class="role-tag hide-mobile">只读家人</el-tag>
         </div>
       </div>
     </header>
@@ -59,7 +59,7 @@ const tabs = [
 const showHeader = computed(() => route.meta.hideAppHeader !== true);
 const showTabBar = computed(() => route.meta.hideTabBar !== true);
 const activeTab = computed(() => route.name);
-const isOwner = computed(() => authStore.isOwner);
+const canEdit = computed(() => authStore.canEdit);
 const displayName = computed(() => authStore.user?.profile?.nickname || authStore.user?.username || '');
 
 const goHome = () => {

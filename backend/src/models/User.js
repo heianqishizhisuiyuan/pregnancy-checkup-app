@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema(
       enum: ['owner', 'family'],
       default: 'owner',
     },
+    canEdit: {
+      type: Boolean,
+      default: false,
+    },
     familyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Family',

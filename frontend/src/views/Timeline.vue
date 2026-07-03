@@ -34,7 +34,7 @@
 
     <div v-else-if="records.length === 0" class="empty">
       <el-empty :description="emptyDescription">
-        <el-button v-if="isOwner && !hasActiveFilter" type="primary" @click="goToAddRecord">
+        <el-button v-if="canEdit && !hasActiveFilter" type="primary" @click="goToAddRecord">
           添加第一条记录
         </el-button>
         <el-button v-else-if="hasActiveFilter" @click="resetFilters">清除筛选</el-button>
@@ -83,11 +83,11 @@ const {
 
 const timelinePageRef = ref(null);
 const groupedRecords = computed(() => groupRecordsByMonth(records.value));
-const isOwner = computed(() => authStore.isOwner);
+const canEdit = computed(() => authStore.canEdit);
 
 const emptyDescription = computed(() => {
   if (hasActiveFilter.value) return '没有符合筛选条件的记录';
-  return isOwner.value ? '还没有产检记录' : '还没有产检记录，请联系主账号添加';
+  return canEdit.value ? '还没有产检记录' : '还没有产检记录，请联系主账号添加';
 });
 
 const { pulling, pullDistance } = usePullToRefresh(timelinePageRef, fetchRecords);

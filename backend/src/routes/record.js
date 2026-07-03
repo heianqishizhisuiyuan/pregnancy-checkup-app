@@ -11,7 +11,7 @@ import {
   updateAttachment,
 } from '../controllers/recordController.js';
 import { authenticate } from '../middlewares/auth.js';
-import { requireOwner } from '../middlewares/roleCheck.js';
+import { requireCanEdit } from '../middlewares/roleCheck.js';
 import { recordExists } from '../middlewares/recordExists.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
 import { uploadRateLimiter } from '../middlewares/rateLimit.js';
@@ -43,7 +43,7 @@ router.get('/:id', getRecordById);
  */
 router.post(
   '/',
-  requireOwner,
+  requireCanEdit,
   [
     body('checkupDate').isISO8601().withMessage('请输入有效的日期'),
     body('gestationalWeek').isInt({ min: 0, max: 45 }).withMessage('孕周必须在0-45之间'),
@@ -60,14 +60,14 @@ router.post(
  * @desc    更新记录
  * @access  Private (Owner only)
  */
-router.put('/:id', requireOwner, updateRecord);
+router.put('/:id', requireCanEdit, updateRecord);
 
 /**
  * @route   DELETE /api/records/:id
  * @desc    删除记录
  * @access  Private (Owner only)
  */
-router.delete('/:id', requireOwner, deleteRecord);
+router.delete('/:id', requireCanEdit, deleteRecord);
 
 /**
  * @route   POST /api/records/:recordId/attachments
@@ -77,7 +77,7 @@ router.delete('/:id', requireOwner, deleteRecord);
 router.post(
   '/:recordId/attachments',
   uploadRateLimiter,
-  requireOwner,
+  requireCanEdit,
   recordExists,
   upload.array('files', 10),
   uploadAttachments
@@ -88,13 +88,13 @@ router.post(
  * @desc    删除附件
  * @access  Private (Owner only)
  */
-router.delete('/:recordId/attachments/:attachmentId', requireOwner, deleteAttachment);
+router.delete('/:recordId/attachments/:attachmentId', requireCanEdit, deleteAttachment);
 
 /**
  * @route   PUT /api/records/:recordId/attachments/:attachmentId
  * @desc    更新附件信息
  * @access  Private (Owner only)
  */
-router.put('/:recordId/attachments/:attachmentId', requireOwner, updateAttachment);
+router.put('/:recordId/attachments/:attachmentId', requireCanEdit, updateAttachment);
 
 export default router;

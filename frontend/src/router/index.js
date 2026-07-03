@@ -33,13 +33,13 @@ const routes = [
     path: '/family/edit',
     name: 'FamilyEdit',
     component: () => import('@/views/FamilyEdit.vue'),
-    meta: { requiresAuth: true, requiresOwner: true, layout: true, hideTabBar: true },
+    meta: { requiresAuth: true, requiresCanEdit: true, layout: true, hideTabBar: true },
   },
   {
     path: '/record/new',
     name: 'RecordNew',
     component: () => import('@/views/RecordForm.vue'),
-    meta: { requiresAuth: true, requiresOwner: true, layout: true, hideTabBar: true },
+    meta: { requiresAuth: true, requiresCanEdit: true, layout: true, hideTabBar: true },
   },
   {
     path: '/record/:id',
@@ -51,7 +51,7 @@ const routes = [
     path: '/record/:id/edit',
     name: 'RecordEdit',
     component: () => import('@/views/RecordForm.vue'),
-    meta: { requiresAuth: true, requiresOwner: true, layout: true, hideTabBar: true },
+    meta: { requiresAuth: true, requiresCanEdit: true, layout: true, hideTabBar: true },
   },
   {
     path: '/timeline',
@@ -85,6 +85,21 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresAuth && !token) {
     // 需要认证但未登录，跳转到登录页
     next({ name: 'Login', query: { redirect: to.fullPath } });
+  } else if (to.meta.requiresCanEdit) {
+    const authStore = useAuthStore();
+    try {
+      await ensureAuthUser(authStore, getCurrentUser);
+    } catch {
+      next({ name: 'Login', query: { redirect: to.fullPath } });
+      return;
+    }
+
+    if (!authStore.canEdit) {
+      ElMessage.warning('权限不足，仅可编辑成员可操作');
+      next({ name: 'Home' });
+      return;
+    }
+    next();
   } else if (to.meta.requiresOwner) {
     // 需要 owner 权限
     const authStore = useAuthStore();

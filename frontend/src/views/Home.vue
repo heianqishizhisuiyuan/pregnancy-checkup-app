@@ -52,13 +52,13 @@
         :next-checkup-date="familyStore.nextCheckupDate"
         :last-period="familyStore.family?.pregnancyInfo?.lastPeriod"
         :reminder-days-before="familyStore.reminderDaysBefore"
-        :is-owner="isOwner"
+        :can-edit="canEdit"
       />
 
       <PregnancySetupBanner
         v-if="!loading"
         :has-last-period="!!familyStore.lastPeriod"
-        :is-owner="isOwner"
+        :can-edit="canEdit"
       />
 
       <!-- 记录列表 -->
@@ -100,8 +100,8 @@
             <el-icon :size="48"><Document /></el-icon>
           </div>
           <p class="empty-text">{{ hasActiveFilter ? '没有符合条件的记录' : '还没有产检记录' }}</p>
-          <p v-if="!hasActiveFilter && isOwner" class="empty-hint">点击右下角按钮添加第一条记录</p>
-          <p v-else-if="!hasActiveFilter && !isOwner" class="empty-hint">您为只读家人，请联系主账号添加记录</p>
+          <p v-if="!hasActiveFilter && canEdit" class="empty-hint">点击右下角按钮添加第一条记录</p>
+          <p v-else-if="!hasActiveFilter && !canEdit" class="empty-hint">您为只读家人，请联系主账号添加记录</p>
         </div>
 
         <div v-else class="records-list">
@@ -133,7 +133,7 @@
 
     <!-- 浮动添加按钮 -->
     <el-button
-      v-if="isOwner"
+      v-if="canEdit"
       type="primary"
       circle
       size="large"
@@ -188,7 +188,7 @@ const currentPage = ref(1);
 const pageSize = ref(20);
 const totalRecords = ref(0);
 
-const isOwner = computed(() => authStore.isOwner);
+const canEdit = computed(() => authStore.canEdit);
 const records = computed(() => recordStore.records);
 
 const hasActiveFilter = computed(() => Object.keys(filters.value).length > 0);

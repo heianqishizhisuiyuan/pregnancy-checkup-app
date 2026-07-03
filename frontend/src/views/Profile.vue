@@ -5,8 +5,8 @@
         <UserAvatar :name="displayName" size="lg" />
         <div class="profile-identity">
           <h1 class="nickname">{{ displayName }}</h1>
-          <el-tag size="small" :type="isOwner ? 'warning' : 'info'">
-            {{ isOwner ? '主账号' : '只读家人' }}
+          <el-tag size="small" :type="roleTagType">
+            {{ roleLabel }}
           </el-tag>
         </div>
         <ThemeToggle />
@@ -58,14 +58,14 @@
             <span class="member-name">
               {{ member.userId?.profile?.nickname || member.userId?.username || '未知用户' }}
             </span>
-            <el-tag size="small" :type="member.role === 'owner' ? 'warning' : 'info'">
-              {{ member.role === 'owner' ? '主账号' : '家人' }}
+            <el-tag size="small" :type="getMemberTagType(member)">
+              {{ getMemberRoleLabel(member) }}
             </el-tag>
           </div>
         </div>
       </div>
 
-      <div v-if="isOwner" class="quick-links">
+      <div v-if="canEdit" class="quick-links">
         <el-button type="primary" plain @click="goToFamilySettings">
           家庭设置与产检提醒
         </el-button>
@@ -174,6 +174,31 @@ const familyLoading = ref(false);
 const members = ref([]);
 
 const isOwner = computed(() => authStore.isOwner);
+const canEdit = computed(() => authStore.canEdit);
+
+const roleLabel = computed(() => {
+  if (isOwner.value) return '主账号';
+  if (canEdit.value) return '可编辑家人';
+  return '只读家人';
+});
+
+const roleTagType = computed(() => {
+  if (isOwner.value) return 'warning';
+  if (canEdit.value) return 'success';
+  return 'info';
+});
+
+function getMemberRoleLabel(member) {
+  if (member.role === 'owner') return '主账号';
+  if (member.userId?.canEdit) return '可编辑家人';
+  return '只读家人';
+}
+
+function getMemberTagType(member) {
+  if (member.role === 'owner') return 'warning';
+  if (member.userId?.canEdit) return 'success';
+  return 'info';
+}
 const displayName = computed(() => authStore.user?.profile?.nickname || authStore.user?.username || '');
 
 const gestationalAgeText = computed(() => {
