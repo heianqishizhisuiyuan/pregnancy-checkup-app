@@ -1,17 +1,36 @@
 <template>
   <div class="attachment-upload">
+    <div v-if="!isQueueMode" class="upload-fields">
+      <el-select v-model="uploadCategory" placeholder="选择分类">
+        <el-option
+          v-for="item in categories"
+          :key="item"
+          :label="item"
+          :value="item"
+        >
+          <CategoryIcon :category="item" :size="14" inline />
+          <span>{{ item }}</span>
+        </el-option>
+      </el-select>
+      <el-input
+        v-model="uploadTagsStr"
+        placeholder="标签用逗号分隔（可选）"
+      />
+    </div>
+
     <el-upload
       ref="uploadRef"
       v-model:file-list="fileList"
       :action="uploadUrl"
       :headers="uploadHeaders"
-      :data="uploadData"
+      :http-request="submitUploadRequest"
       :before-upload="beforeUpload"
       :on-success="handleSuccess"
       :on-error="handleError"
       :limit="maxCount"
       :disabled="isUploadDisabled"
       :show-file-list="props.mode === 'upload'"
+      name="files"
       accept="image/jpeg,image/jpg,image/png,image/webp"
       list-type="picture-card"
       multiple
@@ -74,7 +93,10 @@
                   :key="item"
                   :label="item"
                   :value="item"
-                />
+                >
+                  <CategoryIcon :category="item" :size="14" inline />
+                  <span>{{ item }}</span>
+                </el-option>
               </el-select>
 
               <el-input
@@ -97,7 +119,9 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
+import { uploadAttachmentEntry } from '@/api/attachment';
 import { ATTACHMENT_CATEGORIES } from '@/utils/attachmentCategories';
+import CategoryIcon from '@/components/CategoryIcon.vue';
 import {
   appendQueuedAttachmentEntries,
   getRemainingAttachmentSlots,
@@ -149,6 +173,8 @@ const fileList = ref([]);
 const pendingQueueItems = ref(props.queueItems);
 const queueTagDrafts = ref({});
 const queuedPreviewUrls = ref({});
+const uploadCategory = ref(props.category);
+const uploadTagsStr = ref('');
 const categories = ATTACHMENT_CATEGORIES;
 
 function canCreateObjectUrl() {
@@ -225,13 +251,6 @@ const uploadHeaders = computed(() => {
   };
 });
 
-const uploadData = computed(() => {
-  return {
-    category: props.category,
-    tags: JSON.stringify(props.tags)
-  };
-});
-
 const emitQueueChange = (nextQueue) => {
   pendingQueueItems.value = nextQueue;
   emit('queue-change', nextQueue);
@@ -271,6 +290,20 @@ const formatFileSize = (size = 0) => {
   }
 
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
+};
+
+const submitUploadRequest = (options) => {
+  uploadAttachmentEntry(props.recordId, {
+    file: options.file,
+    category: uploadCategory.value,
+    tags: normalizeAttachmentTags(uploadTagsStr.value)
+  })
+    .then((response) => {
+      options.onSuccess(response);
+    })
+    .catch((error) => {
+      options.onError(error);
+    });
 };
 
 const beforeUpload = (file) => {
@@ -343,6 +376,13 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.upload-fields {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .queue-panel {

@@ -47,7 +47,9 @@
           <h2 class="card-title">生理指标</h2>
           <div class="vitals-grid">
             <div class="vital-item" v-if="record.vitals?.weight">
-              <div class="vital-icon">⚖️</div>
+              <div class="vital-icon">
+                <el-icon :size="28"><Odometer /></el-icon>
+              </div>
               <div class="vital-content">
                 <span class="vital-label">体重</span>
                 <span class="vital-value">{{ record.vitals.weight }} <span class="unit">kg</span></span>
@@ -55,7 +57,9 @@
             </div>
 
             <div class="vital-item" v-if="record.vitals?.bloodPressure?.systolic && record.vitals?.bloodPressure?.diastolic">
-              <div class="vital-icon">💓</div>
+              <div class="vital-icon">
+                <el-icon :size="28"><TrendCharts /></el-icon>
+              </div>
               <div class="vital-content">
                 <span class="vital-label">血压</span>
                 <span class="vital-value">
@@ -66,7 +70,9 @@
             </div>
 
             <div class="vital-item" v-if="record.vitals?.fundalHeight">
-              <div class="vital-icon">📏</div>
+              <div class="vital-icon">
+                <el-icon :size="28"><Compass /></el-icon>
+              </div>
               <div class="vital-content">
                 <span class="vital-label">宫高</span>
                 <span class="vital-value">{{ record.vitals.fundalHeight }} <span class="unit">cm</span></span>
@@ -74,7 +80,9 @@
             </div>
 
             <div class="vital-item" v-if="record.vitals?.abdominalCircumference">
-              <div class="vital-icon">📐</div>
+              <div class="vital-icon">
+                <el-icon :size="28"><Crop /></el-icon>
+              </div>
               <div class="vital-content">
                 <span class="vital-label">腹围</span>
                 <span class="vital-value">{{ record.vitals.abdominalCircumference }} <span class="unit">cm</span></span>
@@ -82,7 +90,9 @@
             </div>
 
             <div class="vital-item" v-if="record.vitals?.fetalHeartRate">
-              <div class="vital-icon">💗</div>
+              <div class="vital-icon">
+                <el-icon :size="28"><DataLine /></el-icon>
+              </div>
               <div class="vital-content">
                 <span class="vital-label">胎心率</span>
                 <span class="vital-value">{{ record.vitals.fetalHeartRate }} <span class="unit">次/分</span></span>
@@ -105,27 +115,17 @@
         <div class="attachments-card">
           <h2 class="card-title">检查报告（{{ record.attachments?.length || 0 }}）</h2>
 
-          <!-- 上传组件（仅 owner 可见）-->
-          <div v-if="isOwner" class="upload-section">
-            <AttachmentUpload
-              :record-id="recordId"
-              :existing-count="record.attachments?.length || 0"
-              @success="handleUploadSuccess"
-            />
-          </div>
-
-          <!-- 图片画廊 -->
+          <!-- 图片画廊（详情页仅查看） -->
           <div v-if="record.attachments && record.attachments.length > 0" class="gallery-section">
             <AttachmentGallery
               :record-id="recordId"
               :attachments="record.attachments"
-              @update="refreshRecord"
-              @delete="refreshRecord"
+              readonly
             />
           </div>
 
           <!-- 空状态 -->
-          <div v-else-if="!isOwner" class="empty-attachments">
+          <div v-else class="empty-attachments">
             <el-empty description="暂无检查报告" :image-size="80" />
           </div>
         </div>
@@ -159,13 +159,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Edit, Delete, Loading } from '@element-plus/icons-vue';
+import { ArrowLeft, Edit, Delete, Loading, Odometer, TrendCharts, Compass, Crop, DataLine } from '@element-plus/icons-vue';
 import { getRecordById, deleteRecord as deleteRecordApi } from '@/api/record';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { formatDate, formatGestationalAge } from '@/utils/date';
 import AttachmentGallery from '@/components/AttachmentGallery.vue';
-import AttachmentUpload from '@/components/AttachmentUpload.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -207,12 +206,6 @@ const refreshRecord = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-// 上传成功处理
-const handleUploadSuccess = () => {
-  // 重新获取记录以刷新附件列表
-  refreshRecord();
 };
 
 // 编辑
@@ -380,7 +373,15 @@ onMounted(() => {
 }
 
 .vital-icon {
-  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .vital-content {
@@ -441,11 +442,6 @@ onMounted(() => {
   padding: var(--spacing-xl);
   border: 1px solid var(--color-border);
 }
-
-.upload-section {
-  margin-bottom: var(--spacing-lg);
-}
-
 .gallery-section {
   margin-top: var(--spacing-md);
 }

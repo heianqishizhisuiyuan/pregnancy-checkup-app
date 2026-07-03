@@ -19,7 +19,7 @@
             v-model="formData.email"
             placeholder="邮箱"
             size="large"
-            prefix-icon="Message"
+            :prefix-icon="Message"
           />
         </el-form-item>
 
@@ -29,7 +29,7 @@
             type="password"
             placeholder="密码"
             size="large"
-            prefix-icon="Lock"
+            :prefix-icon="Lock"
             show-password
           />
         </el-form-item>
@@ -57,6 +57,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { Lock, Message } from '@element-plus/icons-vue';
 import { login as loginApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { validateEmail } from '@/utils/validators';

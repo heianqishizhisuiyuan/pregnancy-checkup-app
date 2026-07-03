@@ -19,7 +19,7 @@
             v-model="formData.username"
             placeholder="用户名"
             size="large"
-            prefix-icon="User"
+            :prefix-icon="User"
           />
         </el-form-item>
 
@@ -28,7 +28,7 @@
             v-model="formData.email"
             placeholder="邮箱"
             size="large"
-            prefix-icon="Message"
+            :prefix-icon="Message"
           />
         </el-form-item>
 
@@ -38,7 +38,7 @@
             type="password"
             placeholder="密码（至少6个字符）"
             size="large"
-            prefix-icon="Lock"
+            :prefix-icon="Lock"
             show-password
           />
         </el-form-item>
@@ -48,7 +48,7 @@
             v-model="formData.nickname"
             placeholder="昵称（可选）"
             size="large"
-            prefix-icon="Star"
+            :prefix-icon="Star"
           />
         </el-form-item>
 
@@ -97,6 +97,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { Lock, Message, Star, User } from '@element-plus/icons-vue';
 import { register as registerApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { validateEmail, validateUsername, validatePassword } from '@/utils/validators';

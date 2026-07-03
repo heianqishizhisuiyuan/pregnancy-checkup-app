@@ -5,14 +5,13 @@
     </div>
 
     <div v-else>
-      <!-- 按分类分组显示 -->
       <div
         v-for="(group, category) in groupedAttachments"
         :key="category"
         class="category-group"
       >
         <div class="category-header">
-          <span class="category-icon">{{ getCategoryIcon(category) }}</span>
+          <CategoryIcon :category="category" :size="20" />
           <span class="category-name">{{ category }}</span>
           <span class="category-count">（{{ group.length }} 张）</span>
         </div>
@@ -24,7 +23,7 @@
             class="image-item"
           >
             <el-image
-              :src="getImageUrl(attachment.path)"
+              :src="getImageUrl(attachment)"
               :preview-src-list="getPreviewList(category)"
               :initial-index="getImageIndex(category, attachment._id)"
               fit="cover"
@@ -39,7 +38,13 @@
             </el-image>
 
             <div class="image-info">
-              <div class="image-name">{{ attachment.filename }}</div>
+              <div class="image-name">{{ normalizeUploadedFilename(attachment.filename) }}</div>
+              <div class="image-meta">
+                <el-tag size="small" type="warning" effect="plain" class="category-tag">
+                  <CategoryIcon :category="attachment.category || '其他'" :size="12" inline />
+                  {{ attachment.category || '其他' }}
+                </el-tag>
+              </div>
               <div v-if="attachment.tags && attachment.tags.length" class="image-tags">
                 <el-tag
                   v-for="tag in attachment.tags"
@@ -52,7 +57,6 @@
               </div>
             </div>
 
-            <!-- 操作按钮（仅 owner 可见）-->
             <div v-if="canEdit" class="image-actions">
               <el-button
                 size="small"
@@ -76,7 +80,6 @@
       </div>
     </div>
 
-    <!-- 编辑对话框 -->
     <el-dialog
       v-model="editDialogVisible"
       title="编辑附件信息"
@@ -90,7 +93,10 @@
               :key="cat"
               :label="cat"
               :value="cat"
-            />
+            >
+              <CategoryIcon :category="cat" :size="14" inline />
+              <span>{{ cat }}</span>
+            </el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="标签">
@@ -109,13 +115,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Picture } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { deleteAttachment, updateAttachment } from '@/api/attachment';
-import { ATTACHMENT_CATEGORIES, CATEGORY_ICONS } from '@/utils/attachmentCategories';
-import { buildAttachmentFileUrl } from '@/utils/attachmentUrls';
+import { ATTACHMENT_CATEGORIES } from '@/utils/attachmentCategories';
+import CategoryIcon from '@/components/CategoryIcon.vue';
+import { createAttachmentPreviewObjectUrl } from '@/utils/attachmentPreview';
+import { normalizeUploadedFilename } from '@/utils/decodeFilename';
 
 const props = defineProps({
   recordId: {
@@ -125,6 +133,10 @@ const props = defineProps({
   attachments: {
     type: Array,
     default: () => []
+  },
+  readonly: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -137,46 +149,76 @@ const editForm = ref({
   category: '',
   tagsStr: ''
 });
+const previewUrls = ref({});
 
 const categories = ATTACHMENT_CATEGORIES;
+const canEdit = computed(() => !props.readonly && authStore.user?.role === 'owner');
 
-// 是否可编辑
-const canEdit = computed(() => authStore.user?.role === 'owner');
-
-// 按分类分组
 const groupedAttachments = computed(() => {
   const groups = {};
-  props.attachments.forEach(att => {
-    const category = att.category || '其他';
+  props.attachments.forEach((attachment) => {
+    const category = attachment.category || '其他';
     if (!groups[category]) {
       groups[category] = [];
     }
-    groups[category].push(att);
+    groups[category].push(attachment);
   });
   return groups;
 });
 
-// 获取分类图标
-const getCategoryIcon = (category) => {
-  return CATEGORY_ICONS[category] || '📄';
+const revokePreviewUrl = (attachmentId) => {
+  const url = previewUrls.value[attachmentId];
+  if (url && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(url);
+  }
+  delete previewUrls.value[attachmentId];
 };
 
-// 获取图片 URL
-const getImageUrl = (path) => {
-  return buildAttachmentFileUrl(import.meta.env.VITE_API_BASE_URL, path);
+const loadPreviewUrl = async (attachment) => {
+  try {
+    const previewUrl = await createAttachmentPreviewObjectUrl({
+      apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
+      path: attachment.path,
+      token: authStore.token
+    });
+    previewUrls.value[attachment._id] = previewUrl;
+  } catch (error) {
+    console.error('Failed to load preview:', error);
+  }
 };
 
-// 获取预览列表
+watch(
+  () => props.attachments,
+  (attachments = [], previousAttachments = []) => {
+    const currentIds = new Set(attachments.map((attachment) => attachment._id));
+
+    previousAttachments
+      .filter((attachment) => !currentIds.has(attachment._id))
+      .forEach((attachment) => revokePreviewUrl(attachment._id));
+
+    attachments.forEach((attachment) => {
+      if (!previewUrls.value[attachment._id]) {
+        loadPreviewUrl(attachment);
+      }
+    });
+  },
+  { immediate: true, deep: true }
+);
+
+const getImageUrl = (attachment) => {
+  return previewUrls.value[attachment._id] || '';
+};
+
 const getPreviewList = (category) => {
-  return groupedAttachments.value[category]?.map(att => getImageUrl(att.path)) || [];
+  return groupedAttachments.value[category]
+    ?.map((attachment) => getImageUrl(attachment))
+    .filter(Boolean) || [];
 };
 
-// 获取图片索引
 const getImageIndex = (category, attachmentId) => {
-  return groupedAttachments.value[category]?.findIndex(att => att._id === attachmentId) || 0;
+  return groupedAttachments.value[category]?.findIndex((attachment) => attachment._id === attachmentId) || 0;
 };
 
-// 编辑附件
 const handleEdit = (attachment) => {
   editForm.value = {
     attachmentId: attachment._id,
@@ -186,10 +228,9 @@ const handleEdit = (attachment) => {
   editDialogVisible.value = true;
 };
 
-// 确认编辑
 const confirmEdit = async () => {
   try {
-    const tags = editForm.value.tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+    const tags = editForm.value.tagsStr.split(',').map((tag) => tag.trim()).filter(Boolean);
     await updateAttachment(props.recordId, editForm.value.attachmentId, {
       category: editForm.value.category,
       tags
@@ -204,11 +245,10 @@ const confirmEdit = async () => {
   }
 };
 
-// 删除附件
 const handleDelete = async (attachment) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除"${attachment.filename}"吗？`,
+      `确定要删除 "${normalizeUploadedFilename(attachment.filename)}" 吗？`,
       '删除确认',
       {
         type: 'warning'
@@ -225,6 +265,10 @@ const handleDelete = async (attachment) => {
     }
   }
 };
+
+onBeforeUnmount(() => {
+  Object.keys(previewUrls.value).forEach((attachmentId) => revokePreviewUrl(attachmentId));
+});
 </script>
 
 <style scoped>
@@ -245,14 +289,10 @@ const handleDelete = async (attachment) => {
 .category-header {
   display: flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 12px;
   font-size: 16px;
   font-weight: 500;
-}
-
-.category-icon {
-  font-size: 20px;
-  margin-right: 8px;
 }
 
 .category-count {
@@ -299,6 +339,16 @@ const handleDelete = async (attachment) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.image-meta {
+  margin-top: 4px;
+}
+
+.category-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .image-tags {

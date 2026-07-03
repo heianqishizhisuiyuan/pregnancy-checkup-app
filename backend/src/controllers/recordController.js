@@ -1,6 +1,7 @@
 import Record from '../models/Record.js';
 import { ATTACHMENT_CATEGORIES } from '../config/multer.js';
 import { deleteFile, deleteAttachmentFiles, deleteRecordDir } from '../utils/fileCleanup.js';
+import { normalizeUploadedFilename, normalizeRecordAttachments } from '../utils/decodeFilename.js';
 import path from 'path';
 
 /**
@@ -15,7 +16,7 @@ export const getRecords = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: records,
+      data: records.map((record) => normalizeRecordAttachments(record)),
     });
   } catch (error) {
     next(error);
@@ -45,7 +46,7 @@ export const getRecordById = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: record,
+      data: normalizeRecordAttachments(record),
     });
   } catch (error) {
     next(error);
@@ -196,7 +197,7 @@ export const uploadAttachments = async (req, res) => {
     const parsedTags = tags ? JSON.parse(tags) : [];
 
     const newAttachments = req.files.map(file => ({
-      filename: file.originalname,
+      filename: normalizeUploadedFilename(file.originalname),
       storedName: file.filename,
       path: file.path.replace(/\\/g, '/'), // 统一使用正斜杠
       size: file.size,

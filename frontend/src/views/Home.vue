@@ -9,8 +9,8 @@
         </div>
         <div class="user-section">
           <span class="username">{{ user?.profile?.nickname || user?.username }}</span>
-          <el-button @click="goToTimeline" text icon="Clock">时间轴</el-button>
-          <el-button v-if="isOwner" @click="handleSettings" text icon="Setting">设置</el-button>
+          <el-button @click="goToTimeline" text :icon="Clock">时间轴</el-button>
+          <el-button v-if="isOwner" @click="handleSettings" text :icon="Setting">设置</el-button>
           <el-button @click="handleLogout" text>退出</el-button>
         </div>
       </div>
@@ -21,7 +21,9 @@
       <!-- 快速统计卡片 -->
       <div class="stats-section">
         <div class="stat-card">
-          <div class="stat-icon">🤰</div>
+          <div class="stat-icon">
+            <el-icon :size="28"><Female /></el-icon>
+          </div>
           <div class="stat-content">
             <div class="stat-label">当前孕周</div>
             <div class="stat-value">
@@ -31,7 +33,9 @@
         </div>
 
         <div class="stat-card">
-          <div class="stat-icon">📅</div>
+          <div class="stat-icon">
+            <el-icon :size="28"><Calendar /></el-icon>
+          </div>
           <div class="stat-content">
             <div class="stat-label">距离预产期</div>
             <div class="stat-value">
@@ -54,7 +58,9 @@
         </div>
 
         <div v-else-if="records.length === 0" class="empty-state">
-          <div class="empty-icon">📝</div>
+          <div class="empty-icon">
+            <el-icon :size="48"><Document /></el-icon>
+          </div>
           <p class="empty-text">还没有产检记录</p>
           <p class="empty-hint">点击右下角按钮添加第一条记录</p>
         </div>
@@ -88,7 +94,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Loading, Setting } from '@element-plus/icons-vue';
+import { Plus, Loading, Setting, Clock, Female, Calendar, Document } from '@element-plus/icons-vue';
 import RecordCard from '@/components/RecordCard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
@@ -260,7 +266,15 @@ onMounted(() => {
 }
 
 .stat-icon {
-  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .stat-content {
@@ -323,8 +337,11 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 4rem;
+  display: flex;
+  justify-content: center;
   margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
+  opacity: 0.6;
 }
 
 .empty-text {

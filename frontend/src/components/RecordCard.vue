@@ -9,7 +9,7 @@
     </div>
 
     <div class="location">
-      <span class="location-icon">📍</span>
+      <el-icon class="location-icon"><Location /></el-icon>
       <span>{{ record.hospital }}</span>
       <span class="separator">·</span>
       <span>{{ record.doctor }}</span>
@@ -39,6 +39,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { Location } from '@element-plus/icons-vue';
 import { formatDate, formatGestationalAge } from '@/utils/date';
 
 const props = defineProps({
@@ -139,6 +140,8 @@ const handleClick = () => {
 
 .location-icon {
   font-size: 1rem;
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .separator {

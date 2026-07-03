@@ -2,7 +2,7 @@
   <div class="family-edit-container">
     <div class="edit-card">
       <div class="card-header">
-        <el-button @click="handleBack" text icon="ArrowLeft">返回</el-button>
+        <el-button @click="handleBack" text :icon="ArrowLeft">返回</el-button>
         <h1 class="title">家庭信息设置</h1>
       </div>
 
@@ -87,6 +87,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { ArrowLeft } from '@element-plus/icons-vue';
 import { useFamilyStore } from '@/stores/family';
 import { getFamily, updateFamily } from '@/api/family';
 import { calculateGestationalAge, calculateDaysUntilDue, formatGestationalAge } from '@/utils/date';

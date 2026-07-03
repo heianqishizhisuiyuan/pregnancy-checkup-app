@@ -1,5 +1,6 @@
 import request from './request.js';
 import { assertAttachmentRecordId } from '../utils/attachmentQueue.js';
+import { createAttachmentFormData } from '../utils/attachmentFormData.js';
 
 export function uploadAttachments(recordId, formData) {
   assertAttachmentRecordId(recordId);
@@ -17,10 +18,7 @@ export function uploadAttachments(recordId, formData) {
 export function uploadAttachmentEntry(recordId, entry) {
   assertAttachmentRecordId(recordId);
 
-  const formData = new FormData();
-  formData.append('files', entry.file);
-  formData.append('category', entry.category);
-  formData.append('tags', JSON.stringify(entry.tags));
+  const formData = createAttachmentFormData(entry);
   return uploadAttachments(recordId, formData);
 }
 

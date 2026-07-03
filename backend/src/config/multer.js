@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
+import { normalizeUploadedFilename } from '../utils/decodeFilename.js';
 
 // 文件存储配置
 const storage = multer.diskStorage({
@@ -19,7 +20,8 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const originalName = normalizeUploadedFilename(file.originalname);
+    const ext = path.extname(originalName);
     const filename = `${uuidv4()}${ext}`;
     cb(null, filename);
   }
