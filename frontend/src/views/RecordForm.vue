@@ -166,14 +166,14 @@
               mode="upload"
               :record-id="currentRecordId"
               :existing-count="recordAttachments.length"
-              @success="loadRecord"
+              @success="refreshRecordAttachments"
             />
           </el-form-item>
           <AttachmentGallery
             :record-id="currentRecordId"
             :attachments="recordAttachments"
-            @update="loadRecord"
-            @delete="loadRecord"
+            @update="refreshRecordAttachments"
+            @delete="refreshRecordAttachments"
           />
         </template>
 
@@ -255,41 +255,67 @@ const rules = {
   ],
 };
 
+const applyRecordFormData = (record) => {
+  Object.assign(formData, {
+    checkupDate: record.checkupDate,
+    gestationalWeek: record.gestationalWeek,
+    gestationalDay: record.gestationalDay,
+    hospital: record.hospital,
+    doctor: record.doctor,
+    vitals: {
+      weight: record.vitals?.weight || null,
+      bloodPressure: {
+        systolic: record.vitals?.bloodPressure?.systolic || null,
+        diastolic: record.vitals?.bloodPressure?.diastolic || null,
+      },
+      fundalHeight: record.vitals?.fundalHeight || null,
+      abdominalCircumference: record.vitals?.abdominalCircumference || null,
+      fetalHeartRate: record.vitals?.fetalHeartRate || null,
+    },
+    notes: record.notes || '',
+  });
+};
+
+const applyRecordAttachmentData = (record) => {
+  currentRecordId.value = record._id || route.params.id || '';
+  recordAttachments.value = record.attachments || [];
+};
+
+const fetchRecord = async () => {
+  return getRecordById(route.params.id);
+};
+
 // 加载记录数据（编辑模式）
 const loadRecord = async () => {
   if (!isEditMode.value) return;
 
   loading.value = true;
   try {
-    const response = await getRecordById(route.params.id);
+    const response = await fetchRecord();
     if (response.success) {
       const record = response.data;
-      currentRecordId.value = record._id || route.params.id || '';
-      recordAttachments.value = record.attachments || [];
-      Object.assign(formData, {
-        checkupDate: record.checkupDate,
-        gestationalWeek: record.gestationalWeek,
-        gestationalDay: record.gestationalDay,
-        hospital: record.hospital,
-        doctor: record.doctor,
-        vitals: {
-          weight: record.vitals?.weight || null,
-          bloodPressure: {
-            systolic: record.vitals?.bloodPressure?.systolic || null,
-            diastolic: record.vitals?.bloodPressure?.diastolic || null,
-          },
-          fundalHeight: record.vitals?.fundalHeight || null,
-          abdominalCircumference: record.vitals?.abdominalCircumference || null,
-          fetalHeartRate: record.vitals?.fetalHeartRate || null,
-        },
-        notes: record.notes || '',
-      });
+      applyRecordAttachmentData(record);
+      applyRecordFormData(record);
     }
   } catch (error) {
     console.error('Failed to load record:', error);
     ElMessage.error('加载记录失败');
   } finally {
     loading.value = false;
+  }
+};
+
+const refreshRecordAttachments = async () => {
+  if (!isEditMode.value) return;
+
+  try {
+    const response = await fetchRecord();
+    if (response.success) {
+      applyRecordAttachmentData(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to refresh attachments:', error);
+    ElMessage.error('加载附件失败');
   }
 };
 
@@ -321,6 +347,7 @@ const handleSubmit = async () => {
           queue: pendingAttachments.value,
           uploader: uploadAttachmentEntry
         });
+        pendingAttachments.value = uploadResult.failed.map(({ error: _error, ...entry }) => entry);
 
         if (uploadResult.failed.length > 0) {
           ElMessage.warning('记录已创建，但部分检查报告上传失败，可稍后在详情页继续上传');
