@@ -78,7 +78,8 @@ echo "=== [$step/$total] 构建前端 ==="
 cd "${APP_DIR}/frontend"
 pnpm install
 echo "VITE_API_BASE_URL=${API_URL}" > .env.production
-pnpm build
+# 直接调用 vite，避免 pnpm 10+ 对 build scripts 审批导致 pnpm build 失败
+node ./node_modules/vite/bin/vite.js build
 step=$((step + 1))
 
 echo "=== [$step/$total] 重启后端（PM2） ==="
