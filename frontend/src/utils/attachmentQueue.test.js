@@ -1,6 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { uploadQueuedAttachments } from './attachmentQueue.js';
+import { createQueuedAttachmentEntry, uploadQueuedAttachments } from './attachmentQueue.js';
+
+test('createQueuedAttachmentEntry applies defaults and overrides', () => {
+  const file = { name: 'report-a.png', size: 1024, lastModified: 12345 };
+
+  assert.deepEqual(createQueuedAttachmentEntry(file), {
+    id: 'report-a.png-1024-12345',
+    file,
+    category: '其他',
+    tags: [],
+    status: 'queued'
+  });
+
+  assert.deepEqual(
+    createQueuedAttachmentEntry(file, {
+      id: 'custom-id',
+      category: 'B超',
+      tags: ['12周'],
+      status: 'uploaded'
+    }),
+    {
+      id: 'custom-id',
+      file,
+      category: 'B超',
+      tags: ['12周'],
+      status: 'uploaded'
+    }
+  );
+});
 
 test('uploadQueuedAttachments uploads queued files in order after record creation', async () => {
   const calls = [];
@@ -36,7 +64,9 @@ test('uploadQueuedAttachments uploads queued files in order after record creatio
 });
 
 test('uploadQueuedAttachments reports failed entries without hiding successful uploads', async () => {
+  const calls = [];
   const uploader = async (recordId, entry) => {
+    calls.push([recordId, entry.file.name]);
     if (entry.file.name === 'bad.png') {
       throw new Error('UPLOAD_FAILED');
     }
@@ -47,12 +77,18 @@ test('uploadQueuedAttachments reports failed entries without hiding successful u
     recordId: 'record-123',
     queue: [
       { file: { name: 'good.png' }, category: '其他', tags: [] },
-      { file: { name: 'bad.png' }, category: '其他', tags: [] }
+      { file: { name: 'bad.png' }, category: '其他', tags: [] },
+      { file: { name: 'later-good.png' }, category: '其他', tags: [] }
     ],
     uploader
   });
 
-  assert.equal(result.succeeded.length, 1);
+  assert.deepEqual(calls, [
+    ['record-123', 'good.png'],
+    ['record-123', 'bad.png'],
+    ['record-123', 'later-good.png']
+  ]);
+  assert.equal(result.succeeded.length, 2);
   assert.equal(result.failed.length, 1);
   assert.equal(result.failed[0].file.name, 'bad.png');
 });
