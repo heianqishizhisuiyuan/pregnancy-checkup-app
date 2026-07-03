@@ -118,7 +118,7 @@ body {
 
 .el-button--primary.is-plain {
   color: var(--color-accent);
-  background-color: #fff;
+  background-color: var(--el-bg-color);
   border-color: var(--color-accent);
 }
 

@@ -73,9 +73,9 @@
 - ✅ 最小自动化测试脚本已建立
 
 ### 下一步（见 iteration-backlog P2/P3）
-- ⏳ 产检提醒、PWA 离线、OSS 云存储
-- ⏳ PDF 直接下载、Swagger 文档
-- ⏳ E2E 测试（可选）
+- ✅ 产检提醒、PWA 离线、PDF 直接下载等已完成（见 backlog）
+- ⏳ 后续以小步体验优化为主（见 iteration-backlog）
+- ❌ **明确不做：** OSS 云存储、忘记密码/邮箱重置、E2E、Swagger、日志监控、多语言（见 `.cursor/rules/out-of-scope.mdc` 与 backlog）
 
 ## Claude 工作指引
 

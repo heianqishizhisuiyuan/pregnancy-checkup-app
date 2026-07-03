@@ -1,5 +1,17 @@
 <template>
-  <div class="timeline-page">
+  <div ref="timelinePageRef" class="timeline-page">
+    <div
+      class="pull-refresh-indicator"
+      :style="{
+        height: pullDistance ? `${pullDistance}px` : pulling ? '40px' : '0',
+        overflow: 'hidden',
+      }"
+    >
+      <template v-if="pulling">刷新中...</template>
+      <template v-else-if="pullDistance >= 72">释放刷新</template>
+      <template v-else-if="pullDistance > 0">下拉刷新</template>
+    </div>
+
     <header class="page-header">
       <div class="header-text">
         <h1>产检时间轴</h1>
@@ -41,11 +53,13 @@ import { getRecords } from '@/api/record';
 import { useRecordStore } from '@/stores/record';
 import { useAuthStore } from '@/stores/auth';
 import { groupRecordsByMonth } from '@/utils/timelineGroups.js';
+import { usePullToRefresh } from '@/composables/usePullToRefresh';
 
 const router = useRouter();
 const recordStore = useRecordStore();
 const authStore = useAuthStore();
 const loading = ref(true);
+const timelinePageRef = ref(null);
 const records = computed(() => recordStore.records);
 const groupedRecords = computed(() => groupRecordsByMonth(records.value));
 const isOwner = computed(() => authStore.isOwner);
@@ -71,6 +85,8 @@ const fetchRecords = async () => {
     loading.value = false;
   }
 };
+
+const { pulling, pullDistance } = usePullToRefresh(timelinePageRef, fetchRecords);
 
 const goToDetail = (recordId) => {
   router.push(`/record/${recordId}`);

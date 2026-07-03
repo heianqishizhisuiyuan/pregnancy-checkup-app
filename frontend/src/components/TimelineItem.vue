@@ -96,7 +96,7 @@ const handleClick = () => {
   top: 24px;
   bottom: 0;
   width: 2px;
-  background: #E7E1D7;
+  background: var(--color-border);
 }
 
 .timeline-item:last-child::before {
@@ -110,9 +110,9 @@ const handleClick = () => {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #C4612F;
-  border: 4px solid #F7F4EF;
-  box-shadow: 0 0 0 2px #C4612F;
+  background: var(--color-accent);
+  border: 4px solid var(--color-bg-primary);
+  box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 .timeline-content {
@@ -120,17 +120,17 @@ const handleClick = () => {
 }
 
 .card {
-  background: #FBF9F5;
-  border-radius: 12px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
   padding: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #E7E1D7;
+  border: 1px solid var(--color-border);
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31, 36, 33, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .card-header {
@@ -147,13 +147,13 @@ const handleClick = () => {
 .checkup-date {
   font-size: 18px;
   font-weight: 600;
-  color: #1F2421;
+  color: var(--color-text-primary);
   margin-bottom: 4px;
 }
 
 .gestational-age {
   font-size: 14px;
-  color: #5C635D;
+  color: var(--color-text-secondary);
 }
 
 .attachment-badge {
@@ -161,10 +161,10 @@ const handleClick = () => {
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  background: #F2E3D6;
-  border-radius: 999px;
+  background: var(--color-accent-light);
+  border-radius: var(--radius-full);
   font-size: 12px;
-  color: #C4612F;
+  color: var(--color-accent);
 }
 
 .card-body {
@@ -179,12 +179,12 @@ const handleClick = () => {
 }
 
 .label {
-  color: #5C635D;
+  color: var(--color-text-secondary);
   min-width: 50px;
 }
 
 .value {
-  color: #1F2421;
+  color: var(--color-text-primary);
 }
 
 .vitals-summary {
@@ -193,11 +193,11 @@ const handleClick = () => {
   gap: 16px;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid #E7E1D7;
+  border-top: 1px solid var(--color-border);
 }
 
 .vital-item {
   font-size: 13px;
-  color: #5C635D;
+  color: var(--color-text-secondary);
 }
 </style>

@@ -21,5 +21,9 @@ export function buildExportFilename(filters = {}) {
     parts.push(filters.hospital.slice(0, 8));
   }
 
+  if (filters.keyword) {
+    parts.push(filters.keyword.trim().slice(0, 8));
+  }
+
   return parts.join('_');
 }

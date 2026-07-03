@@ -13,9 +13,15 @@ export function usePullToRefresh(containerRef, onRefresh) {
   let startY = 0;
   let active = false;
 
-  const onTouchStart = (e) => {
+  const isAtTop = () => {
     const el = containerRef?.value;
-    if (!el || el.scrollTop > 0) return;
+    if (!el) return false;
+    const winScroll = window.scrollY || document.documentElement.scrollTop || 0;
+    return el.scrollTop <= 0 && winScroll <= 0;
+  };
+
+  const onTouchStart = (e) => {
+    if (!isAtTop()) return;
     startY = e.touches[0].clientY;
     active = true;
   };

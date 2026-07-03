@@ -30,6 +30,11 @@ describe('buildExportFilename', () => {
     assert.match(name, /孕20-28周/);
     assert.match(name, /市妇幼/);
   });
+
+  it('includes keyword in filename', () => {
+    const name = buildExportFilename({ keyword: '糖耐' });
+    assert.match(name, /糖耐/);
+  });
 });
 
 describe('seriesHasData', () => {

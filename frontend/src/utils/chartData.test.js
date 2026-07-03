@@ -82,10 +82,19 @@ describe('recordsToRows', () => {
         vitals: { weight: 58.5, bloodPressure: { systolic: 110, diastolic: 70 } },
         notes: '正常',
         attachmentCount: 2,
+        _id: 'abc123',
       },
     ]);
 
     assert.equal(rows[0].医院, '市妇幼');
     assert.equal(rows[0].附件数, 2);
+    assert.equal(rows[0].记录链接, '/record/abc123');
+  });
+
+  it('builds record link with baseUrl', () => {
+    const rows = recordsToRows([{ _id: 'abc123', checkupDate: '2026-06-01' }], {
+      baseUrl: 'https://example.com',
+    });
+    assert.equal(rows[0].记录链接, 'https://example.com/record/abc123');
   });
 });

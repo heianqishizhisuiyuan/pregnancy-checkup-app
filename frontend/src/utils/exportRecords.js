@@ -3,29 +3,40 @@ import { formatDate, formatGestationalAge } from './date.js';
 
 /**
  * 将记录转为导出行
+ * @param {Array} records
+ * @param {{ baseUrl?: string }} options - baseUrl 用于生成详情页链接（Excel 中可点击跳转）
  */
-export function recordsToRows(records) {
-  return records.map((record) => ({
-    产检日期: formatDate(record.checkupDate),
-    孕周: formatGestationalAge(record.gestationalWeek, record.gestationalDay),
-    医院: record.hospital || '',
-    医生: record.doctor || '',
-    体重kg: record.vitals?.weight ?? '',
-    收缩压: record.vitals?.bloodPressure?.systolic ?? '',
-    舒张压: record.vitals?.bloodPressure?.diastolic ?? '',
-    宫高cm: record.vitals?.fundalHeight ?? '',
-    腹围cm: record.vitals?.abdominalCircumference ?? '',
-    胎心率: record.vitals?.fetalHeartRate ?? '',
-    附件数: record.attachmentCount ?? record.attachments?.length ?? 0,
-    备注: record.notes || '',
-  }));
+export function recordsToRows(records, options = {}) {
+  const { baseUrl = '' } = options;
+
+  return records.map((record) => {
+    const attachmentCount = record.attachmentCount ?? record.attachments?.length ?? 0;
+    const recordLink = record._id ? `${baseUrl}/record/${record._id}` : '';
+
+    return {
+      产检日期: formatDate(record.checkupDate),
+      孕周: formatGestationalAge(record.gestationalWeek, record.gestationalDay),
+      医院: record.hospital || '',
+      医生: record.doctor || '',
+      体重kg: record.vitals?.weight ?? '',
+      收缩压: record.vitals?.bloodPressure?.systolic ?? '',
+      舒张压: record.vitals?.bloodPressure?.diastolic ?? '',
+      宫高cm: record.vitals?.fundalHeight ?? '',
+      腹围cm: record.vitals?.abdominalCircumference ?? '',
+      胎心率: record.vitals?.fetalHeartRate ?? '',
+      附件数: attachmentCount,
+      记录链接: recordLink,
+      备注: record.notes || '',
+    };
+  });
 }
 
 /**
  * 导出 Excel
  */
 export function exportRecordsToExcel(records, filename = '产检记录') {
-  const rows = recordsToRows(records);
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const rows = recordsToRows(records, { baseUrl });
   const worksheet = XLSX.utils.json_to_sheet(rows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '产检记录');
@@ -37,7 +48,7 @@ export function exportRecordsToExcel(records, filename = '产检记录') {
  */
 export function buildRecordsPdfHtml(records, options = {}) {
   const { title = '产检记录', familyName = '' } = options;
-  const rows = recordsToRows(records);
+  const rows = recordsToRows(records, { baseUrl: '' });
 
   const tableRows = rows
     .map(
@@ -52,6 +63,7 @@ export function buildRecordsPdfHtml(records, options = {}) {
         <td>${row.宫高cm}</td>
         <td>${row.腹围cm}</td>
         <td>${row.胎心率}</td>
+        <td>${row.附件数}</td>
         <td>${row.备注}</td>
       </tr>`
     )
@@ -78,7 +90,7 @@ export function buildRecordsPdfHtml(records, options = {}) {
     <thead>
       <tr>
         <th>日期</th><th>孕周</th><th>医院</th><th>医生</th>
-        <th>体重</th><th>血压</th><th>宫高</th><th>腹围</th><th>胎心</th><th>备注</th>
+        <th>体重</th><th>血压</th><th>宫高</th><th>腹围</th><th>胎心</th><th>附件</th><th>备注</th>
       </tr>
     </thead>
     <tbody>${tableRows}</tbody>
