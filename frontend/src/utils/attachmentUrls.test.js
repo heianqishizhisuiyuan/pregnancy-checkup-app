@@ -15,3 +15,10 @@ test('buildAttachmentFileUrl converts api base url to uploads root url', () => {
     'http://localhost:3000/uploads/families/f1/records/r1/image.webp'
   );
 });
+
+test('buildAttachmentFileUrl leaves existing uploads path intact under site root', () => {
+  assert.equal(
+    buildAttachmentFileUrl('https://api.example.com/api', '/uploads/families/f1/records/r1/test.png'),
+    'https://api.example.com/uploads/families/f1/records/r1/test.png'
+  );
+});

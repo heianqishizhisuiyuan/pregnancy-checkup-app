@@ -115,6 +115,7 @@ import { Picture } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { deleteAttachment, updateAttachment } from '@/api/attachment';
 import { ATTACHMENT_CATEGORIES, CATEGORY_ICONS } from '@/utils/attachmentCategories';
+import { buildAttachmentFileUrl } from '@/utils/attachmentUrls';
 
 const props = defineProps({
   recordId: {
@@ -162,7 +163,7 @@ const getCategoryIcon = (category) => {
 
 // 获取图片 URL
 const getImageUrl = (path) => {
-  return `${import.meta.env.VITE_API_BASE_URL}/${path}`;
+  return buildAttachmentFileUrl(import.meta.env.VITE_API_BASE_URL, path);
 };
 
 // 获取预览列表
