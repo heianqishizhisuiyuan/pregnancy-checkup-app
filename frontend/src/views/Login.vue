@@ -55,13 +55,15 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Lock, Message } from '@element-plus/icons-vue';
 import { login as loginApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { validateEmail } from '@/utils/validators';
+import { resolveSafeRedirect } from '@/utils/redirect';
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
@@ -113,7 +115,8 @@ const handleSubmit = async () => {
       localStorage.setItem(REMEMBERED_EMAIL_KEY, formData.email.trim());
       authStore.login(response.data);
       ElMessage.success('登录成功');
-      router.push({ name: 'Home' });
+      const redirect = resolveSafeRedirect(route.query.redirect);
+      router.push(redirect || { name: 'Home' });
     }
   } catch (error) {
     console.error('Login error:', error);

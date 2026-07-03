@@ -15,17 +15,29 @@
     <header class="page-header">
       <div class="header-text">
         <h1>产检时间轴</h1>
-        <p v-if="!loading && records.length > 0" class="header-hint">共 {{ records.length }} 次产检</p>
+        <p v-if="!loading" class="header-hint">
+          {{ hasActiveFilter ? `筛选结果 ${records.length} 次产检` : `共 ${records.length} 次产检` }}
+        </p>
       </div>
     </header>
+
+    <div class="filter-wrap">
+      <RecordRangeFilter
+        v-model="filters"
+        v-model:expanded="filterExpanded"
+        @apply="applyFilters"
+        @reset="resetFilters"
+      />
+    </div>
 
     <TimelineListSkeleton v-if="loading" />
 
     <div v-else-if="records.length === 0" class="empty">
       <el-empty :description="emptyDescription">
-        <el-button v-if="isOwner" type="primary" @click="goToAddRecord">
+        <el-button v-if="isOwner && !hasActiveFilter" type="primary" @click="goToAddRecord">
           添加第一条记录
         </el-button>
+        <el-button v-else-if="hasActiveFilter" @click="resetFilters">清除筛选</el-button>
       </el-empty>
     </div>
 
@@ -46,45 +58,37 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
 import TimelineItem from '@/components/TimelineItem.vue';
+import RecordRangeFilter from '@/components/RecordRangeFilter.vue';
 import TimelineListSkeleton from '@/components/skeletons/TimelineListSkeleton.vue';
-import { getRecords } from '@/api/record';
-import { useRecordStore } from '@/stores/record';
 import { useAuthStore } from '@/stores/auth';
 import { groupRecordsByMonth } from '@/utils/timelineGroups.js';
 import { usePullToRefresh } from '@/composables/usePullToRefresh';
+import { useRecordRangeFilter } from '@/composables/useRecordRangeFilter';
 
 const router = useRouter();
-const recordStore = useRecordStore();
 const authStore = useAuthStore();
-const loading = ref(true);
+
+const {
+  filters,
+  records,
+  loading,
+  filterExpanded,
+  hasActiveFilter,
+  fetchRecords,
+  applyFilters,
+  resetFilters,
+  initFromRoute,
+} = useRecordRangeFilter();
+
 const timelinePageRef = ref(null);
-const records = computed(() => recordStore.records);
 const groupedRecords = computed(() => groupRecordsByMonth(records.value));
 const isOwner = computed(() => authStore.isOwner);
 
-const emptyDescription = computed(() => (
-  isOwner.value ? '还没有产检记录' : '还没有产检记录，请联系主账号添加'
-));
-
-const fetchRecords = async () => {
-  if (recordStore.records.length > 0) {
-    loading.value = false;
-  }
-
-  try {
-    const response = await getRecords();
-    if (response.success) {
-      recordStore.setRecords(response.data);
-    }
-  } catch (error) {
-    console.error('获取记录失败:', error);
-    ElMessage.error('获取记录失败');
-  } finally {
-    loading.value = false;
-  }
-};
+const emptyDescription = computed(() => {
+  if (hasActiveFilter.value) return '没有符合筛选条件的记录';
+  return isOwner.value ? '还没有产检记录' : '还没有产检记录，请联系主账号添加';
+});
 
 const { pulling, pullDistance } = usePullToRefresh(timelinePageRef, fetchRecords);
 
@@ -97,6 +101,7 @@ const goToAddRecord = () => {
 };
 
 onMounted(() => {
+  initFromRoute();
   fetchRecords();
 });
 </script>
@@ -109,7 +114,12 @@ onMounted(() => {
 
 .page-header {
   max-width: 800px;
-  margin: 0 auto var(--spacing-lg);
+  margin: 0 auto var(--spacing-md);
+}
+
+.filter-wrap {
+  max-width: 800px;
+  margin: 0 auto var(--spacing-md);
 }
 
 .header-text h1 {

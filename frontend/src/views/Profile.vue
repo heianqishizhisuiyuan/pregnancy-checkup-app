@@ -12,6 +12,15 @@
         <ThemeToggle />
       </div>
 
+      <PwaInstallBanner />
+
+      <div class="offline-info">
+        <div class="offline-info-title">离线说明</div>
+        <p class="offline-info-text">
+          安装到主屏幕后，弱网下可打开已访问过的页面；附件图片与实时数据需联网加载。
+        </p>
+      </div>
+
       <div v-if="familyLoading" class="section-loading">
         <el-skeleton :rows="3" animated />
       </div>
@@ -151,6 +160,7 @@ import { getFamily, getMembers } from '@/api/family';
 import { formatGestationalAge } from '@/utils/date';
 import UserAvatar from '@/components/UserAvatar.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import PwaInstallBanner from '@/components/PwaInstallBanner.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -334,6 +344,28 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.offline-info {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.offline-info-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.offline-info-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
 .section-loading {

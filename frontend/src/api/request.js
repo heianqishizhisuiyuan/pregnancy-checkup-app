@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 import router from '@/router';
+import { buildLoginQuery } from '@/utils/redirect';
 
 // 创建 axios 实例
 const request = axios.create({
@@ -38,10 +39,14 @@ request.interceptors.response.use(
     if (response) {
       const { status, data } = response;
 
-      // 401 未授权，清除 token 并跳转登录页
+      // 401 未授权，清除 token 并跳转登录页（保留回跳地址）
       if (status === 401) {
         localStorage.removeItem('token');
-        router.push({ name: 'Login' });
+        const currentPath = router.currentRoute.value.fullPath;
+        router.push({
+          name: 'Login',
+          query: buildLoginQuery(currentPath),
+        });
         ElMessage.error(data.error?.message || '登录已过期，请重新登录');
       } else if (status === 403) {
         ElMessage.error(data.error?.message || '权限不足');

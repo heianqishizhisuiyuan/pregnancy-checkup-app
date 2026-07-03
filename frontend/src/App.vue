@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth';
 import { getCurrentUser } from '@/api/auth';
 import AppLayout from '@/components/AppLayout.vue';
 import OfflineBanner from '@/components/OfflineBanner.vue';
+import { buildLoginQuery } from '@/utils/redirect';
 
 const route = useRoute();
 const router = useRouter();
@@ -38,7 +39,10 @@ onMounted(async () => {
     } catch (error) {
       console.error('Failed to get current user:', error);
       authStore.logout();
-      router.push({ name: 'Login' });
+      router.push({
+        name: 'Login',
+        query: buildLoginQuery(route.fullPath),
+      });
     }
   }
 });

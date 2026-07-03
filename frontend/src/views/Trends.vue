@@ -3,17 +3,31 @@
     <header class="page-header">
       <div class="header-text">
         <h1>数据趋势</h1>
-        <p v-if="records.length > 0" class="header-hint">
-          共 {{ records.length }} 次产检 · 悬停查看详情 · 点击数据点跳转记录{{ records.length > 12 ? ' · 可滚轮缩放' : '' }}
+        <p v-if="!loading" class="header-hint">
+          <template v-if="records.length > 0">
+            {{ hasActiveFilter ? `筛选结果 ${records.length} 次` : `共 ${records.length} 次产检` }}
+            · 悬停查看详情 · 点击数据点跳转记录{{ records.length > 12 ? ' · 可滚轮缩放' : '' }}
+          </template>
+          <template v-else-if="hasActiveFilter">当前筛选条件下暂无记录</template>
         </p>
       </div>
     </header>
 
+    <div class="filter-wrap">
+      <RecordRangeFilter
+        v-model="filters"
+        v-model:expanded="filterExpanded"
+        @apply="handleApplyFilters"
+        @reset="resetFilters"
+      />
+    </div>
+
     <ChartCardsSkeleton v-if="loading" />
 
     <div v-else-if="records.length === 0" class="empty">
-      <el-empty description="暂无记录，无法生成趋势图">
-        <el-button type="primary" @click="goBack">返回首页</el-button>
+      <el-empty :description="emptyDescription">
+        <el-button v-if="hasActiveFilter" @click="resetFilters">清除筛选</el-button>
+        <el-button v-else type="primary" @click="goBack">返回首页</el-button>
       </el-empty>
     </div>
 
@@ -49,19 +63,31 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
 import * as echarts from 'echarts';
-import { getRecords } from '@/api/record';
-import { useRecordStore } from '@/stores/record';
+import RecordRangeFilter from '@/components/RecordRangeFilter.vue';
 import { buildVitalChartSeries, buildLineChartOption, seriesHasData } from '@/utils/chartData';
 import ChartCardsSkeleton from '@/components/skeletons/ChartCardsSkeleton.vue';
+import { useRecordRangeFilter } from '@/composables/useRecordRangeFilter';
 
 const router = useRouter();
-const recordStore = useRecordStore();
-const loading = ref(true);
-const records = computed(() => recordStore.records);
+
+const {
+  filters,
+  records,
+  loading,
+  filterExpanded,
+  hasActiveFilter,
+  fetchRecords,
+  applyFilters,
+  resetFilters,
+  initFromRoute,
+} = useRecordRangeFilter();
+
+const emptyDescription = computed(() => (
+  hasActiveFilter.value ? '没有符合筛选条件的记录' : '暂无记录，无法生成趋势图'
+));
 
 const weightChartRef = ref(null);
 const bpChartRef = ref(null);
@@ -200,35 +226,36 @@ const handleResize = () => {
   chartInstances.forEach((chart) => chart.resize());
 };
 
-const loadRecords = async () => {
-  if (recordStore.records.length > 0) {
-    loading.value = false;
-  }
-
-  try {
-    const res = await getRecords();
-    if (res.success) {
-      recordStore.setRecords(res.data);
-    }
-  } catch (error) {
-    console.error('Failed to load records for trends:', error);
-    ElMessage.error('加载记录失败');
-  } finally {
-    loading.value = false;
-  }
-
+const handleApplyFilters = async (nextFilters) => {
+  await applyFilters(nextFilters);
   if (records.value.length > 0 && hasAnyChartData.value) {
     await nextTick();
     renderCharts();
   }
 };
 
+watch(records, async () => {
+  if (loading.value) return;
+  if (records.value.length > 0 && hasAnyChartData.value) {
+    await nextTick();
+    renderCharts();
+  } else {
+    chartInstances.forEach((chart) => chart.dispose());
+    chartInstances.length = 0;
+  }
+});
+
 const goBack = () => {
   router.push({ name: 'Home' });
 };
 
-onMounted(() => {
-  loadRecords();
+onMounted(async () => {
+  initFromRoute();
+  await fetchRecords();
+  if (records.value.length > 0 && hasAnyChartData.value) {
+    await nextTick();
+    renderCharts();
+  }
   window.addEventListener('resize', handleResize);
 });
 
@@ -247,10 +274,12 @@ onBeforeUnmount(() => {
 
 .page-header {
   max-width: 880px;
+  margin: 0 auto var(--spacing-md);
+}
+
+.filter-wrap {
+  max-width: 880px;
   margin: 0 auto var(--spacing-lg);
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
 }
 
 .header-text h1 {
