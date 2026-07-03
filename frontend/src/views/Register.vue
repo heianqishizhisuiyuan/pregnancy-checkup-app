@@ -4,8 +4,13 @@
       <div class="register-header">
         <div class="logo">💝</div>
         <h1 class="title">创建账号</h1>
-        <p class="subtitle">开始记录你的孕期之旅</p>
+        <p class="subtitle">{{ isJoinMode ? '输入邀请码加入家庭' : '开始记录你的孕期之旅' }}</p>
       </div>
+
+      <el-radio-group v-model="registerMode" class="mode-switch">
+        <el-radio-button label="create">创建新家庭</el-radio-button>
+        <el-radio-button label="join">加入家庭</el-radio-button>
+      </el-radio-group>
 
       <el-form
         ref="formRef"
@@ -14,6 +19,17 @@
         class="register-form"
         @submit.prevent="handleSubmit"
       >
+        <el-form-item v-if="isJoinMode" prop="inviteCode">
+          <el-input
+            v-model="formData.inviteCode"
+            placeholder="家庭邀请码（8位）"
+            size="large"
+            :prefix-icon="Key"
+            maxlength="12"
+            @input="formData.inviteCode = formData.inviteCode.toUpperCase()"
+          />
+        </el-form-item>
+
         <el-form-item prop="username">
           <el-input
             v-model="formData.username"
@@ -52,27 +68,29 @@
           />
         </el-form-item>
 
-        <el-form-item prop="lastPeriod">
-          <el-date-picker
-            v-model="formData.lastPeriod"
-            type="date"
-            placeholder="末次月经日期（可选）"
-            size="large"
-            style="width: 100%"
-            value-format="YYYY-MM-DD"
-          />
-        </el-form-item>
+        <template v-if="!isJoinMode">
+          <el-form-item prop="lastPeriod">
+            <el-date-picker
+              v-model="formData.lastPeriod"
+              type="date"
+              placeholder="末次月经日期（可选）"
+              size="large"
+              style="width: 100%"
+              value-format="YYYY-MM-DD"
+            />
+          </el-form-item>
 
-        <el-form-item prop="dueDate">
-          <el-date-picker
-            v-model="formData.dueDate"
-            type="date"
-            placeholder="预产期（可选）"
-            size="large"
-            style="width: 100%"
-            value-format="YYYY-MM-DD"
-          />
-        </el-form-item>
+          <el-form-item prop="dueDate">
+            <el-date-picker
+              v-model="formData.dueDate"
+              type="date"
+              placeholder="预产期（可选）"
+              size="large"
+              style="width: 100%"
+              value-format="YYYY-MM-DD"
+            />
+          </el-form-item>
+        </template>
 
         <el-button
           type="primary"
@@ -81,7 +99,7 @@
           class="submit-btn"
           native-type="submit"
         >
-          注册
+          {{ isJoinMode ? '加入家庭' : '注册' }}
         </el-button>
       </el-form>
 
@@ -94,19 +112,21 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Lock, Message, Star, User } from '@element-plus/icons-vue';
+import { Key, Lock, Message, Star, User } from '@element-plus/icons-vue';
 import { register as registerApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { validateEmail, validateUsername, validatePassword } from '@/utils/validators';
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
 const formRef = ref(null);
 const loading = ref(false);
+const registerMode = ref(route.query.invite ? 'join' : 'create');
 
 const formData = reactive({
   username: '',
@@ -115,9 +135,15 @@ const formData = reactive({
   nickname: '',
   lastPeriod: '',
   dueDate: '',
+  inviteCode: route.query.invite ? String(route.query.invite).toUpperCase() : '',
 });
 
-const rules = {
+const isJoinMode = computed(() => registerMode.value === 'join');
+
+const rules = computed(() => ({
+  inviteCode: isJoinMode.value
+    ? [{ required: true, message: '请输入邀请码', trigger: 'blur' }]
+    : [],
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     {
@@ -157,18 +183,32 @@ const rules = {
       trigger: 'blur',
     },
   ],
-};
+}));
 
 const handleSubmit = async () => {
   try {
     await formRef.value.validate();
     loading.value = true;
 
-    const response = await registerApi(formData);
+    const payload = {
+      username: formData.username,
+      email: formData.email,
+      password: formData.password,
+      nickname: formData.nickname,
+    };
+
+    if (isJoinMode.value) {
+      payload.inviteCode = formData.inviteCode.trim();
+    } else {
+      payload.lastPeriod = formData.lastPeriod || undefined;
+      payload.dueDate = formData.dueDate || undefined;
+    }
+
+    const response = await registerApi(payload);
 
     if (response.success) {
       authStore.login(response.data);
-      ElMessage.success('注册成功，欢迎加入！');
+      ElMessage.success(isJoinMode.value ? '加入家庭成功！' : '注册成功，欢迎加入！');
       router.push({ name: 'Home' });
     }
   } catch (error) {
@@ -199,7 +239,7 @@ const handleSubmit = async () => {
 
 .register-header {
   text-align: center;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
 }
 
 .logo {
@@ -217,6 +257,13 @@ const handleSubmit = async () => {
 .subtitle {
   font-size: 0.9rem;
   color: var(--color-text-secondary);
+}
+
+.mode-switch {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--spacing-lg);
 }
 
 .register-form {

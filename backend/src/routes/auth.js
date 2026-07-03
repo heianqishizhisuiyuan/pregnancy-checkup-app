@@ -17,6 +17,7 @@ router.post(
     body('email').isEmail().withMessage('请输入有效的邮箱'),
     body('password').isLength({ min: 6 }).withMessage('密码至少6个字符'),
     body('nickname').optional().trim().isLength({ max: 50 }).withMessage('昵称最多50个字符'),
+    body('inviteCode').optional().trim().isLength({ min: 6, max: 12 }).withMessage('邀请码格式无效'),
   ],
   register
 );

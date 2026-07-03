@@ -6,6 +6,10 @@
         <div class="gestational">{{ formatGestational }}</div>
       </div>
       <div v-if="isLatest" class="latest-badge">最新</div>
+      <div v-if="attachmentCount > 0" class="attachment-badge">
+        <el-icon><Picture /></el-icon>
+        {{ attachmentCount }}
+      </div>
     </div>
 
     <div class="location">
@@ -39,7 +43,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { Location } from '@element-plus/icons-vue';
+import { Location, Picture } from '@element-plus/icons-vue';
 import { formatDate, formatGestationalAge } from '@/utils/date';
 
 const props = defineProps({
@@ -73,6 +77,10 @@ const hasVitals = computed(() => {
          vitals.fetalHeartRate;
 });
 
+const attachmentCount = computed(() => {
+  return props.record.attachmentCount ?? props.record.attachments?.length ?? 0;
+});
+
 const handleClick = () => {
   router.push({ name: 'RecordDetail', params: { id: props.record._id } });
 };
@@ -100,6 +108,7 @@ const handleClick = () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .date-info {
@@ -127,6 +136,17 @@ const handleClick = () => {
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.attachment-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--spacing-sm);
+  background: var(--color-accent-light);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  color: var(--color-accent);
 }
 
 .location {

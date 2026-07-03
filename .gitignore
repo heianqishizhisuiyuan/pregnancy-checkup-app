@@ -52,3 +52,6 @@ Desktop.ini
 # PM2
 ecosystem.config.js
 .pm2/
+
+scripts/ssh-key-2026-03-07.key
+.history/*

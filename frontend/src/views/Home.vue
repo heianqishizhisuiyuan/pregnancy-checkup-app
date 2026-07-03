@@ -9,6 +9,7 @@
         </div>
         <div class="user-section">
           <span class="username">{{ user?.profile?.nickname || user?.username }}</span>
+          <el-button @click="goToTrends" text :icon="TrendCharts">趋势</el-button>
           <el-button @click="goToTimeline" text :icon="Clock">时间轴</el-button>
           <el-button v-if="isOwner" @click="handleSettings" text :icon="Setting">设置</el-button>
           <el-button @click="handleLogout" text>退出</el-button>
@@ -26,9 +27,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-label">当前孕周</div>
-            <div class="stat-value">
-              {{ gestationalAgeText }}
-            </div>
+            <div class="stat-value">{{ gestationalAgeText }}</div>
           </div>
         </div>
 
@@ -38,9 +37,17 @@
           </div>
           <div class="stat-content">
             <div class="stat-label">距离预产期</div>
-            <div class="stat-value">
-              {{ daysUntilDueText }}
-            </div>
+            <div class="stat-value">{{ daysUntilDueText }}</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <el-icon :size="28"><Document /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">已完成产检</div>
+            <div class="stat-value">{{ totalRecordCount }} 次</div>
           </div>
         </div>
       </div>
@@ -49,8 +56,23 @@
       <div class="records-section">
         <div class="section-header">
           <h2 class="section-title">产检记录</h2>
-          <span class="record-count">共 {{ records.length }} 条记录</span>
+          <div class="section-actions">
+            <span class="record-count">
+              {{ hasActiveFilter ? `筛选结果 ${records.length} 条` : `共 ${records.length} 条记录` }}
+            </span>
+            <el-dropdown v-if="records.length" trigger="click" @command="handleExport">
+              <el-button text :icon="Download">导出</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
+                  <el-dropdown-item command="pdf">导出 PDF（打印）</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
+
+        <RecordFilterBar v-model="filters" @search="handleSearch" />
 
         <div v-if="loading" class="loading">
           <el-icon class="is-loading"><Loading /></el-icon>
@@ -61,8 +83,8 @@
           <div class="empty-icon">
             <el-icon :size="48"><Document /></el-icon>
           </div>
-          <p class="empty-text">还没有产检记录</p>
-          <p class="empty-hint">点击右下角按钮添加第一条记录</p>
+          <p class="empty-text">{{ hasActiveFilter ? '没有符合条件的记录' : '还没有产检记录' }}</p>
+          <p v-if="!hasActiveFilter && isOwner" class="empty-hint">点击右下角按钮添加第一条记录</p>
         </div>
 
         <div v-else class="records-list">
@@ -70,7 +92,7 @@
             v-for="(record, index) in records"
             :key="record._id"
             :record="record"
-            :is-latest="index === 0"
+            :is-latest="!hasActiveFilter && index === 0"
           />
         </div>
       </div>
@@ -94,14 +116,19 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus, Loading, Setting, Clock, Female, Calendar, Document } from '@element-plus/icons-vue';
+import {
+  Plus, Loading, Setting, Clock, Female, Calendar, Document,
+  TrendCharts, Download,
+} from '@element-plus/icons-vue';
 import RecordCard from '@/components/RecordCard.vue';
+import RecordFilterBar from '@/components/RecordFilterBar.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { useFamilyStore } from '@/stores/family';
 import { getRecords } from '@/api/record';
 import { getFamily } from '@/api/family';
 import { formatGestationalAge } from '@/utils/date';
+import { exportRecordsToExcel, exportRecordsToPdf } from '@/utils/exportRecords';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -109,11 +136,14 @@ const recordStore = useRecordStore();
 const familyStore = useFamilyStore();
 
 const loading = ref(false);
+const filters = ref({});
+const totalRecordCount = ref(0);
 
-// 计算属性
 const user = computed(() => authStore.user);
 const isOwner = computed(() => authStore.isOwner);
 const records = computed(() => recordStore.records);
+
+const hasActiveFilter = computed(() => Object.keys(filters.value).length > 0);
 
 const gestationalAgeText = computed(() => {
   const age = familyStore.currentGestationalAge;
@@ -128,17 +158,32 @@ const daysUntilDueText = computed(() => {
   return `${days} 天`;
 });
 
-// 加载数据
+const loadRecords = async (params = {}) => {
+  loading.value = true;
+  try {
+    const recordsRes = await getRecords(params);
+    if (recordsRes.success) {
+      recordStore.setRecords(recordsRes.data);
+    }
+  } catch (error) {
+    console.error('Failed to load records:', error);
+    ElMessage.error('加载记录失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
 const loadData = async () => {
   loading.value = true;
   try {
-    const [recordsRes, familyRes] = await Promise.all([
+    const [allRecordsRes, familyRes] = await Promise.all([
       getRecords(),
       getFamily(),
     ]);
 
-    if (recordsRes.success) {
-      recordStore.setRecords(recordsRes.data);
+    if (allRecordsRes.success) {
+      recordStore.setRecords(allRecordsRes.data);
+      totalRecordCount.value = allRecordsRes.data.length;
     }
 
     if (familyRes.success) {
@@ -152,12 +197,35 @@ const loadData = async () => {
   }
 };
 
-// 添加记录
+const handleSearch = (params) => {
+  loadRecords(params);
+};
+
+const handleExport = (command) => {
+  const familyName = familyStore.family?.name || '';
+  const filename = `产检记录_${new Date().toISOString().slice(0, 10)}`;
+
+  try {
+    if (command === 'excel') {
+      exportRecordsToExcel(records.value, filename);
+      ElMessage.success('Excel 导出成功');
+    } else if (command === 'pdf') {
+      exportRecordsToPdf(records.value, { title: '产检记录', familyName });
+    }
+  } catch (error) {
+    console.error('Export failed:', error);
+    ElMessage.error(error.message || '导出失败');
+  }
+};
+
 const handleAddRecord = () => {
   router.push({ name: 'RecordNew' });
 };
 
-// 家庭设置
+const goToTrends = () => {
+  router.push({ name: 'Trends' });
+};
+
 const goToTimeline = () => {
   router.push('/timeline');
 };
@@ -166,7 +234,6 @@ const handleSettings = () => {
   router.push({ name: 'FamilyEdit' });
 };
 
-// 退出登录
 const handleLogout = async () => {
   try {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -194,7 +261,6 @@ onMounted(() => {
   background: var(--color-bg-primary);
 }
 
-/* 顶部导航栏 */
 .navbar {
   background: var(--color-bg-white);
   border-bottom: 1px solid var(--color-border);
@@ -232,7 +298,9 @@ onMounted(() => {
 .user-section {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .username {
@@ -240,17 +308,15 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
-/* 主内容区 */
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-lg);
 }
 
-/* 统计卡片 */
 .stats-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-xl);
 }
@@ -293,7 +359,6 @@ onMounted(() => {
   color: var(--color-accent);
 }
 
-/* 记录列表 */
 .records-section {
   background: var(--color-bg-white);
   border-radius: var(--radius-lg);
@@ -305,7 +370,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
 .section-title {
@@ -314,12 +381,17 @@ onMounted(() => {
   color: var(--color-text-primary);
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
 .record-count {
   font-size: 0.875rem;
   color: var(--color-text-secondary);
 }
 
-/* 加载状态 */
 .loading {
   display: flex;
   flex-direction: column;
@@ -330,7 +402,6 @@ onMounted(() => {
   color: var(--color-text-secondary);
 }
 
-/* 空状态 */
 .empty-state {
   text-align: center;
   padding: var(--spacing-xl) var(--spacing-md);
@@ -355,14 +426,12 @@ onMounted(() => {
   color: var(--color-text-secondary);
 }
 
-/* 记录列表 */
 .records-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
 }
 
-/* 浮动添加按钮 */
 .fab {
   position: fixed;
   bottom: var(--spacing-xl);

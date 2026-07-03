@@ -65,6 +65,34 @@
           </div>
         </el-form-item>
 
+        <el-divider content-position="left">
+          <span class="divider-text">家人邀请</span>
+        </el-divider>
+
+        <el-form-item label="邀请码">
+          <div class="invite-row">
+            <el-input :model-value="inviteCode" readonly class="invite-code-input" />
+            <el-button @click="handleCopyInvite" :icon="CopyDocument">复制</el-button>
+            <el-button @click="handleRegenerateInvite" :loading="inviteLoading">重新生成</el-button>
+          </div>
+          <div class="form-tip">
+            家人注册时选择「加入家庭」并输入此邀请码，即可查看产检记录（只读）
+          </div>
+        </el-form-item>
+
+        <el-form-item v-if="members.length" label="家庭成员">
+          <div class="members-list">
+            <div v-for="member in members" :key="member.userId?._id || member.userId" class="member-item">
+              <span class="member-name">
+                {{ member.userId?.profile?.nickname || member.userId?.username || '未知用户' }}
+              </span>
+              <el-tag size="small" :type="member.role === 'owner' ? 'warning' : 'info'">
+                {{ member.role === 'owner' ? '主账号' : '家人' }}
+              </el-tag>
+            </div>
+          </div>
+        </el-form-item>
+
         <el-form-item>
           <el-button
             type="primary"
@@ -87,9 +115,9 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft } from '@element-plus/icons-vue';
+import { ArrowLeft, CopyDocument } from '@element-plus/icons-vue';
 import { useFamilyStore } from '@/stores/family';
-import { getFamily, updateFamily } from '@/api/family';
+import { getFamily, updateFamily, getInviteCode, regenerateInviteCode, getMembers } from '@/api/family';
 import { calculateGestationalAge, calculateDaysUntilDue, formatGestationalAge } from '@/utils/date';
 import dayjs from 'dayjs';
 
@@ -98,6 +126,9 @@ const familyStore = useFamilyStore();
 
 const formRef = ref(null);
 const loading = ref(false);
+const inviteLoading = ref(false);
+const inviteCode = ref('');
+const members = ref([]);
 const originalData = ref(null);
 
 const formData = reactive({
@@ -151,22 +182,61 @@ const disabledDateDue = (date) => {
 const loadData = async () => {
   loading.value = true;
   try {
-    const res = await getFamily();
-    if (res.success && res.data) {
-      originalData.value = res.data;
-      formData.name = res.data.name || '';
-      formData.lastPeriod = res.data.pregnancyInfo?.lastPeriod
-        ? new Date(res.data.pregnancyInfo.lastPeriod)
+    const [familyRes, inviteRes, membersRes] = await Promise.all([
+      getFamily(),
+      getInviteCode(),
+      getMembers(),
+    ]);
+
+    if (familyRes.success && familyRes.data) {
+      originalData.value = familyRes.data;
+      formData.name = familyRes.data.name || '';
+      formData.lastPeriod = familyRes.data.pregnancyInfo?.lastPeriod
+        ? new Date(familyRes.data.pregnancyInfo.lastPeriod)
         : null;
-      formData.dueDate = res.data.pregnancyInfo?.dueDate
-        ? new Date(res.data.pregnancyInfo.dueDate)
+      formData.dueDate = familyRes.data.pregnancyInfo?.dueDate
+        ? new Date(familyRes.data.pregnancyInfo.dueDate)
         : null;
+    }
+
+    if (inviteRes.success) {
+      inviteCode.value = inviteRes.data.inviteCode;
+    }
+
+    if (membersRes.success) {
+      members.value = membersRes.data;
     }
   } catch (error) {
     console.error('Failed to load family data:', error);
     ElMessage.error('加载家庭信息失败');
   } finally {
     loading.value = false;
+  }
+};
+
+const handleCopyInvite = async () => {
+  if (!inviteCode.value) return;
+  try {
+    await navigator.clipboard.writeText(inviteCode.value);
+    ElMessage.success('邀请码已复制');
+  } catch {
+    ElMessage.warning(`请手动复制：${inviteCode.value}`);
+  }
+};
+
+const handleRegenerateInvite = async () => {
+  inviteLoading.value = true;
+  try {
+    const res = await regenerateInviteCode();
+    if (res.success) {
+      inviteCode.value = res.data.inviteCode;
+      ElMessage.success('邀请码已更新，旧邀请码将失效');
+    }
+  } catch (error) {
+    console.error('Failed to regenerate invite code:', error);
+    ElMessage.error('重新生成失败');
+  } finally {
+    inviteLoading.value = false;
   }
 };
 
@@ -290,5 +360,38 @@ onMounted(() => {
   font-size: 1rem;
   font-weight: 600;
   color: var(--color-accent);
+}
+
+.invite-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.invite-code-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-sm);
+}
+
+.member-name {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
 }
 </style>

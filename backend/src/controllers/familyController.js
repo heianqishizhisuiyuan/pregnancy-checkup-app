@@ -1,4 +1,5 @@
 import Family from '../models/Family.js';
+import { ensureFamilyInviteCode, generateInviteCode } from '../utils/inviteCode.js';
 
 /**
  * 获取当前用户的家庭信息
@@ -18,6 +19,8 @@ export const getFamily = async (req, res, next) => {
         },
       });
     }
+
+    await ensureFamilyInviteCode(family);
 
     res.json({
       success: true,
@@ -71,6 +74,126 @@ export const updateFamily = async (req, res, next) => {
     res.json({
       success: true,
       data: family,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取家庭邀请码
+ * GET /api/family/invite
+ */
+export const getInviteCode = async (req, res, next) => {
+  try {
+    const family = await Family.findById(req.user.familyId);
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '家庭不存在',
+        },
+      });
+    }
+
+    if (family.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: '只有主账号可以查看邀请码',
+        },
+      });
+    }
+
+    const inviteCode = await ensureFamilyInviteCode(family);
+
+    res.json({
+      success: true,
+      data: { inviteCode },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 重新生成邀请码
+ * POST /api/family/invite/regenerate
+ */
+export const regenerateInviteCode = async (req, res, next) => {
+  try {
+    const family = await Family.findById(req.user.familyId);
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '家庭不存在',
+        },
+      });
+    }
+
+    if (family.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: '只有主账号可以重新生成邀请码',
+        },
+      });
+    }
+
+    let code;
+    let attempts = 0;
+
+    do {
+      code = generateInviteCode();
+      const exists = await Family.findOne({
+        inviteCode: code,
+        _id: { $ne: family._id },
+      });
+      if (!exists) break;
+      attempts += 1;
+    } while (attempts < 10);
+
+    family.inviteCode = code;
+    await family.save();
+
+    res.json({
+      success: true,
+      data: { inviteCode: code },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取家庭成员列表
+ * GET /api/family/members
+ */
+export const getMembers = async (req, res, next) => {
+  try {
+    const family = await Family.findById(req.user.familyId)
+      .populate('members.userId', 'username email profile.nickname role');
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: '家庭不存在',
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: family.members,
     });
   } catch (error) {
     next(error);

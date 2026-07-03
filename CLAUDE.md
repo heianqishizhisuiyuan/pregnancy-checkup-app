@@ -10,6 +10,7 @@
 
 - **设计文档**：`docs/design.md` - 完整的系统设计、数据模型、API 设计、技术栈等
 - **实施计划**：`docs/superpowers/plans/2026-07-02-pregnancy-checkup-mvp.md` - MVP 分步骤开发计划
+- **后续迭代 backlog**：`docs/superpowers/plans/2026-07-03-iteration-backlog.md` - 遗漏项与优化项，可逐项执行
 - **项目总结**：`PROJECT_SUMMARY.md` - 当前功能完成情况、启动方式和后续优化方向
 - **快速启动**：`QUICK_START.md` - 本地运行和故障排查说明
 

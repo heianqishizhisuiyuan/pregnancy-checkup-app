@@ -2,21 +2,27 @@ import Record from '../models/Record.js';
 import { ATTACHMENT_CATEGORIES } from '../config/multer.js';
 import { deleteFile, deleteAttachmentFiles, deleteRecordDir } from '../utils/fileCleanup.js';
 import { normalizeUploadedFilename, normalizeRecordAttachments } from '../utils/decodeFilename.js';
+import { buildRecordFilter, slimRecordForList } from '../utils/recordFilter.js';
 import path from 'path';
 
 /**
- * 获取当前家庭的所有记录
- * GET /api/records
+ * 获取当前家庭的所有记录（支持筛选）
+ * GET /api/records?keyword=&hospital=&startDate=&endDate=&minWeek=&maxWeek=
  */
 export const getRecords = async (req, res, next) => {
   try {
-    const records = await Record.find({ familyId: req.user.familyId })
+    const filter = buildRecordFilter(req.user.familyId, req.query);
+
+    const records = await Record.find(filter)
       .sort({ checkupDate: -1 })
       .populate('createdBy', 'username profile.nickname');
 
     res.json({
       success: true,
-      data: records.map((record) => normalizeRecordAttachments(record)),
+      data: records.map((record) => {
+        const normalized = normalizeRecordAttachments(record);
+        return slimRecordForList(normalized);
+      }),
     });
   } catch (error) {
     next(error);

@@ -41,6 +41,13 @@ const familySchema = new mongoose.Schema(
         required: false,
       },
     },
+    inviteCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -50,6 +57,7 @@ const familySchema = new mongoose.Schema(
 // 添加索引
 familySchema.index({ ownerId: 1 });
 familySchema.index({ 'members.userId': 1 });
+familySchema.index({ inviteCode: 1 });
 
 const Family = mongoose.model('Family', familySchema);
 

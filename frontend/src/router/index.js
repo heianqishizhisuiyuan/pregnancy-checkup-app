@@ -53,6 +53,12 @@ const routes = [
     component: () => import('@/views/Timeline.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/trends',
+    name: 'Trends',
+    component: () => import('@/views/Trends.vue'),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({

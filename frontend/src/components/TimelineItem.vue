@@ -10,9 +10,9 @@
               {{ record.gestationalWeek }}周{{ record.gestationalDay > 0 ? `+${record.gestationalDay}天` : '' }}
             </div>
           </div>
-          <div v-if="record.attachments && record.attachments.length" class="attachment-badge">
+          <div v-if="attachmentCount > 0" class="attachment-badge">
             <el-icon><Picture /></el-icon>
-            {{ record.attachments.length }}
+            {{ attachmentCount }}
           </div>
         </div>
 
@@ -43,6 +43,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { Picture } from '@element-plus/icons-vue';
 import dayjs from 'dayjs';
 
@@ -54,6 +55,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click']);
+
+const attachmentCount = computed(() => {
+  return props.record.attachmentCount ?? props.record.attachments?.length ?? 0;
+});
 
 const formatDate = (date) => {
   return dayjs(date).format('YYYY-MM-DD');

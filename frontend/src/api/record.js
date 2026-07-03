@@ -1,12 +1,14 @@
 import request from './request';
 
 /**
- * 获取所有记录
+ * 获取所有记录（支持筛选）
+ * @param {Object} params - keyword, hospital, startDate, endDate, minWeek, maxWeek
  */
-export function getRecords() {
+export function getRecords(params = {}) {
   return request({
     url: '/records',
     method: 'get',
+    params,
   });
 }
 
