@@ -31,3 +31,25 @@ export function getCurrentUser() {
     method: 'get',
   });
 }
+
+/**
+ * 更新昵称
+ */
+export function updateProfile(data) {
+  return request({
+    url: '/auth/profile',
+    method: 'put',
+    data,
+  });
+}
+
+/**
+ * 修改密码
+ */
+export function updatePassword(data) {
+  return request({
+    url: '/auth/password',
+    method: 'put',
+    data,
+  });
+}

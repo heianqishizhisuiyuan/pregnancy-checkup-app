@@ -14,6 +14,7 @@ import { authenticate } from '../middlewares/auth.js';
 import { requireOwner } from '../middlewares/roleCheck.js';
 import { recordExists } from '../middlewares/recordExists.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
+import { uploadRateLimiter } from '../middlewares/rateLimit.js';
 import { upload } from '../config/multer.js';
 
 const router = express.Router();
@@ -75,6 +76,7 @@ router.delete('/:id', requireOwner, deleteRecord);
  */
 router.post(
   '/:recordId/attachments',
+  uploadRateLimiter,
   requireOwner,
   recordExists,
   upload.array('files', 10),

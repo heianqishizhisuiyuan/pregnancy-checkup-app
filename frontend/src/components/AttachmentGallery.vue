@@ -20,6 +20,7 @@
           <div
             v-for="attachment in group"
             :key="attachment._id"
+            :ref="(el) => registerLazyTarget(el, attachment._id)"
             class="image-item"
           >
             <el-image
@@ -28,7 +29,17 @@
               :initial-index="getImageIndex(category, attachment._id)"
               fit="cover"
               class="image"
+              lazy
             >
+              <template #placeholder>
+                <div class="image-placeholder">
+                  <el-skeleton animated>
+                    <template #template>
+                      <el-skeleton-item variant="image" style="width: 100%; height: 100%" />
+                    </template>
+                  </el-skeleton>
+                </div>
+              </template>
               <template #error>
                 <div class="image-error">
                   <el-icon><Picture /></el-icon>
@@ -124,6 +135,7 @@ import { ATTACHMENT_CATEGORIES } from '@/utils/attachmentCategories';
 import CategoryIcon from '@/components/CategoryIcon.vue';
 import { createAttachmentPreviewObjectUrl } from '@/utils/attachmentPreview';
 import { normalizeUploadedFilename } from '@/utils/decodeFilename';
+import { useLazyAttachmentPreview } from '@/composables/useLazyAttachmentPreview';
 
 const props = defineProps({
   recordId: {
@@ -150,9 +162,18 @@ const editForm = ref({
   tagsStr: ''
 });
 const previewUrls = ref({});
+const loadingIds = ref(new Set());
 
 const categories = ATTACHMENT_CATEGORIES;
 const canEdit = computed(() => !props.readonly && authStore.user?.role === 'owner');
+
+const attachmentMap = computed(() => {
+  const map = new Map();
+  props.attachments.forEach((attachment) => {
+    map.set(attachment._id, attachment);
+  });
+  return map;
+});
 
 const groupedAttachments = computed(() => {
   const groups = {};
@@ -175,6 +196,11 @@ const revokePreviewUrl = (attachmentId) => {
 };
 
 const loadPreviewUrl = async (attachment) => {
+  if (!attachment || previewUrls.value[attachment._id] || loadingIds.value.has(attachment._id)) {
+    return;
+  }
+
+  loadingIds.value.add(attachment._id);
   try {
     const previewUrl = await createAttachmentPreviewObjectUrl({
       apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
@@ -184,7 +210,24 @@ const loadPreviewUrl = async (attachment) => {
     previewUrls.value[attachment._id] = previewUrl;
   } catch (error) {
     console.error('Failed to load preview:', error);
+  } finally {
+    loadingIds.value.delete(attachment._id);
   }
+};
+
+const { observe, unobserve } = useLazyAttachmentPreview((attachmentId) => {
+  const attachment = attachmentMap.value.get(attachmentId);
+  if (attachment) {
+    loadPreviewUrl(attachment);
+  }
+});
+
+const registerLazyTarget = (el, attachmentId) => {
+  if (!el) {
+    unobserve(attachmentId);
+    return;
+  }
+  observe(el, attachmentId);
 };
 
 watch(
@@ -195,14 +238,8 @@ watch(
     previousAttachments
       .filter((attachment) => !currentIds.has(attachment._id))
       .forEach((attachment) => revokePreviewUrl(attachment._id));
-
-    attachments.forEach((attachment) => {
-      if (!previewUrls.value[attachment._id]) {
-        loadPreviewUrl(attachment);
-      }
-    });
   },
-  { immediate: true, deep: true }
+  { deep: true }
 );
 
 const getImageUrl = (attachment) => {
@@ -320,6 +357,11 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.image-placeholder {
+  width: 100%;
+  height: 150px;
+}
+
 .image-error {
   display: flex;
   flex-direction: column;
@@ -368,5 +410,17 @@ onBeforeUnmount(() => {
 
 .image-item:hover .image-actions {
   display: flex;
+}
+
+@media (max-width: 640px) {
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+
+  .image,
+  .image-placeholder {
+    height: 120px;
+  }
 }
 </style>

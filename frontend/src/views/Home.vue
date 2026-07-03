@@ -9,10 +9,21 @@
         </div>
         <div class="user-section">
           <span class="username">{{ user?.profile?.nickname || user?.username }}</span>
-          <el-button @click="goToTrends" text :icon="TrendCharts">趋势</el-button>
-          <el-button @click="goToTimeline" text :icon="Clock">时间轴</el-button>
-          <el-button v-if="isOwner" @click="handleSettings" text :icon="Setting">设置</el-button>
-          <el-button @click="handleLogout" text>退出</el-button>
+          <el-button @click="goToTrends" text :icon="TrendCharts">
+            <span class="nav-label">趋势</span>
+          </el-button>
+          <el-button @click="goToTimeline" text :icon="Clock">
+            <span class="nav-label">时间轴</span>
+          </el-button>
+          <el-button @click="goToProfile" text :icon="User">
+            <span class="nav-label">账号</span>
+          </el-button>
+          <el-button v-if="isOwner" @click="handleSettings" text :icon="Setting">
+            <span class="nav-label">设置</span>
+          </el-button>
+          <el-button @click="handleLogout" text>
+            <span class="nav-label">退出</span>
+          </el-button>
         </div>
       </div>
     </header>
@@ -20,7 +31,8 @@
     <!-- 主内容区 -->
     <main class="main-content">
       <!-- 快速统计卡片 -->
-      <div class="stats-section">
+      <StatsCardsSkeleton v-if="loading" />
+      <div v-else class="stats-section">
         <div class="stat-card">
           <div class="stat-icon">
             <el-icon :size="28"><Female /></el-icon>
@@ -83,10 +95,7 @@
 
         <RecordFilterBar v-model="filters" v-model:expanded="filterExpanded" @search="handleSearch" />
 
-        <div v-if="loading" class="loading">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          <span>加载中...</span>
-        </div>
+        <RecordListSkeleton v-if="loading" />
 
         <div v-else-if="records.length === 0" class="empty-state">
           <div class="empty-icon">
@@ -105,13 +114,14 @@
           />
         </div>
 
-        <div v-if="totalRecords > pageSize" class="pagination-wrap">
+        <div v-if="!loading && totalRecords > pageSize" class="pagination-wrap">
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :total="totalRecords"
             :page-sizes="[10, 20, 50]"
-            layout="total, sizes, prev, pager, next"
+            :layout="paginationLayout"
+            :small="isNarrowScreen"
             background
             @current-change="handlePageChange"
             @size-change="handlePageSizeChange"
@@ -135,15 +145,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
-  Plus, Loading, Setting, Clock, Female, Calendar, Document,
-  TrendCharts, Download, Filter, ArrowUp,
+  Plus, Setting, Clock, Female, Calendar, Document,
+  TrendCharts, Download, Filter, ArrowUp, User,
 } from '@element-plus/icons-vue';
 import RecordCard from '@/components/RecordCard.vue';
 import RecordFilterBar from '@/components/RecordFilterBar.vue';
+import StatsCardsSkeleton from '@/components/skeletons/StatsCardsSkeleton.vue';
+import RecordListSkeleton from '@/components/skeletons/RecordListSkeleton.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { useFamilyStore } from '@/stores/family';
@@ -158,6 +170,7 @@ const recordStore = useRecordStore();
 const familyStore = useFamilyStore();
 
 const loading = ref(false);
+const isNarrowScreen = ref(false);
 const filters = ref({});
 const filterExpanded = ref(false);
 const totalRecordCount = ref(0);
@@ -172,6 +185,10 @@ const records = computed(() => recordStore.records);
 const hasActiveFilter = computed(() => Object.keys(filters.value).length > 0);
 
 const activeFilterCount = computed(() => Object.keys(filters.value).length);
+
+const paginationLayout = computed(() => (
+  isNarrowScreen.value ? 'prev, pager, next' : 'total, sizes, prev, pager, next'
+));
 
 const recordCountText = computed(() => {
   if (hasActiveFilter.value) {
@@ -284,6 +301,10 @@ const goToTimeline = () => {
   router.push('/timeline');
 };
 
+const goToProfile = () => {
+  router.push({ name: 'Profile' });
+};
+
 const handleSettings = () => {
   router.push({ name: 'FamilyEdit' });
 };
@@ -304,8 +325,24 @@ const handleLogout = async () => {
   }
 };
 
+let narrowMediaQuery;
+let updateNarrowScreen;
+
 onMounted(() => {
+  narrowMediaQuery = window.matchMedia('(max-width: 640px)');
+  updateNarrowScreen = (event) => {
+    isNarrowScreen.value = event.matches;
+  };
+  isNarrowScreen.value = narrowMediaQuery.matches;
+  narrowMediaQuery.addEventListener('change', updateNarrowScreen);
+
   loadData();
+});
+
+onBeforeUnmount(() => {
+  if (narrowMediaQuery && updateNarrowScreen) {
+    narrowMediaQuery.removeEventListener('change', updateNarrowScreen);
+  }
 });
 </script>
 
@@ -506,12 +543,47 @@ onMounted(() => {
 
 .fab {
   position: fixed;
-  bottom: var(--spacing-xl);
-  right: var(--spacing-xl);
+  bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom, 0px));
+  right: calc(var(--spacing-xl) + env(safe-area-inset-right, 0px));
   width: 56px;
   height: 56px;
   box-shadow: var(--shadow-lg);
   font-size: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .navbar-content {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .app-name {
+    font-size: 1.1rem;
+  }
+
+  .username {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .main-content {
+    padding: var(--spacing-lg) var(--spacing-md);
+    padding-bottom: calc(var(--spacing-xl) + 56px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .records-section {
+    padding: var(--spacing-lg);
+  }
+
+  .fab {
+    bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom, 0px));
+    right: calc(var(--spacing-lg) + env(safe-area-inset-right, 0px));
+  }
 }
 
 .fab:hover {

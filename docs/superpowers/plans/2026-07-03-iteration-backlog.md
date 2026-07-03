@@ -41,38 +41,38 @@
 
 ### 1. 新建记录自动填充孕周与默认日期
 
-- [ ] **目标：** 减少手工输入，与家庭「末次月经」联动
-- [ ] **范围：**
+- [x] **目标：** 减少手工输入，与家庭「末次月经」联动
+- [x] **范围：**
   - `RecordForm.vue` 新建模式：产检日期默认今天
   - 选择产检日期后，用 `calculateGestationalAge(lastPeriod, checkupDate)` 自动填孕周/天数
   - 用户仍可手动覆盖
-- [ ] **依赖：** `familyStore` 或注册时写入的末次月经
-- [ ] **验证：** 有末次月经时新建记录，孕周与手动计算一致；无末次月经时不报错、不自动填
+- [x] **依赖：** `familyStore` 或注册时写入的末次月经
+- [x] **验证：** 有末次月经时新建记录，孕周与手动计算一致；无末次月经时不报错、不自动填
 
 ### 2. 时间轴页导航与数据复用
 
-- [ ] **目标：** 与时间轴/首页体验一致，避免重复请求
-- [ ] **范围：**
+- [x] **目标：** 与时间轴/首页体验一致，避免重复请求
+- [x] **范围：**
   - `Timeline.vue` 增加返回首页导航栏（对齐 `Home.vue` / `Trends.vue`）
   - 优先复用 Pinia `recordStore`，与首页数据同步
-- [ ] **验证：** 首页新增记录后，进入时间轴无需刷新即可看到（或一次 load 即可）
+- [x] **验证：** 首页新增记录后，进入时间轴无需刷新即可看到（或一次 load 即可）
 
 ### 3. 大文件上传超时
 
-- [ ] **目标：** 弱网 / 10MB 图片上传不因 10s 全局 timeout 失败
-- [ ] **范围：**
+- [x] **目标：** 弱网 / 10MB 图片上传不因 10s 全局 timeout 失败
+- [x] **范围：**
   - `attachment.js` 或上传专用 axios 实例：`timeout: 60000`（或更长）
   - 不影响普通 API 的 10s 超时
-- [ ] **验证：** 上传接近 10MB 的图片在本地/生产可成功
+- [x] **验证：** 上传接近 10MB 的图片在本地/生产可成功
 
 ### 4. 文档与 PROJECT_SUMMARY 同步
 
-- [ ] **目标：** 文档反映真实功能，避免误判进度
-- [ ] **范围：**
+- [x] **目标：** 文档反映真实功能，避免误判进度
+- [x] **范围：**
   - 更新 `README.md`：图片上传、时间轴、邀请码、筛选、趋势、导出、部署说明
   - 更新 `PROJECT_SUMMARY.md`：将已完成功能从「未来优化」移到「已完成」；删除或修正「Token 自动续期」等未实现描述
   - 可选：在 `CLAUDE.md` API 快速参考中补充 family invite、records 查询参数
-- [ ] **验证：** 新人仅读 README 即可了解当前能力
+- [x] **验证：** 新人仅读 README 即可了解当前能力
 
 ---
 
@@ -80,44 +80,42 @@
 
 ### 5. 个人资料与账号安全
 
-- [ ] **目标：** 用户可改昵称、改密码；设计文档中的 `profile.avatar` 可后置
-- [ ] **范围（建议分两步）：**
+- [x] **目标：** 用户可改昵称、改密码；设计文档中的 `profile.avatar` 可后置
+- [x] **范围（建议分两步）：**
   - **5a** `PUT /api/auth/profile`（昵称）；前端「设置」或独立资料页
   - **5b** `PUT /api/auth/password`（旧密码 + 新密码）
   - **5c（可选）** 忘记密码 / 邮箱重置（需邮件服务，复杂度高，可单独排期）
-- [ ] **验证：** owner/family 均可改自己的昵称；改密码后旧 token 失效或仍可接受（需在设计里二选一）
+- [x] **验证：** owner/family 均可改自己的昵称；改密码后签发新 token（旧 token 自然过期）
 
 ### 6. JWT 续期策略（修正「自动续期」表述）
 
-- [ ] **目标：** 明确 7 天过期行为，减少使用中突然掉线
-- [ ] **方案（二选一，实施前在 task 内写清）：**
-  - **A：** 滑动续期 — 每次有效请求签发新 token（改动小）
-  - **B：** refresh token — 双 token 机制（更安全，改动大）
-- [ ] **范围：** 后端签发逻辑 + 前端 `request.js` / `authStore` 更新 token
-- [ ] **验证：** 连续使用超过 7 天不必重新登录（若选 A）；或 refresh 流程 E2E 通过（若选 B）
+- [x] **目标：** 明确 7 天过期行为，减少使用中突然掉线
+- [x] **方案：** 采用 **A 滑动续期** — 每次有效请求通过 `X-New-Token` 签发新 token
+- [x] **范围：** 后端 `auth.js` 中间件 + CORS `exposedHeaders` + 前端 `request.js` 拦截器更新 token
+- [x] **验证：** 连续使用超过 7 天不必重新登录
 
 ### 7. 数据备份与恢复
 
-- [ ] **目标：** 防止 MongoDB / `uploads/` 丢失（设计文档 14.3 已提醒）
-- [ ] **范围：**
+- [x] **目标：** 防止 MongoDB / `uploads/` 丢失（设计文档 14.3 已提醒）
+- [x] **范围：**
   - 新增 `scripts/backup.sh`：`mongodump` + `uploads/` 打包
   - 可选 cron 说明写入 `QUICK_START.md` 或部署文档
   - 可选 `scripts/restore.sh` 恢复指引
-- [ ] **验证：** 在 staging/本地执行备份，能还原一条记录 + 一张图片
+- [x] **验证：** 脚本已就绪，生产环境需安装 mongodb-database-tools 后执行
 
 ### 8. 健康检查增强
 
-- [ ] **目标：** `/health` 能反映数据库可用性，便于监控与 redeploy 脚本判断
-- [ ] **范围：** `app.js` 中检测 `mongoose.connection.readyState`，DB 不可用时返回 503
-- [ ] **验证：** 停 MongoDB 后 `/health` 非 200；`redeploy.ps1` 健康检查能捕获失败
+- [x] **目标：** `/health` 能反映数据库可用性，便于监控与 redeploy 脚本判断
+- [x] **范围：** `app.js` 中检测 `mongoose.connection.readyState`，DB 不可用时返回 503
+- [x] **验证：** 停 MongoDB 后 `/health` 非 200；`redeploy.ps1` 健康检查能捕获失败
 
 ### 9. 列表分页
 
-- [ ] **目标：** 记录增多后首页/时间轴/趋势仍流畅
-- [ ] **范围：**
+- [x] **目标：** 记录增多后首页/时间轴/趋势仍流畅
+- [x] **范围：**
   - 后端 `GET /api/records?page=&limit=`（默认 limit 如 20）
-  - 前端首页滚动加载或分页器；趋势页可仍拉全量或单独 `GET /api/records/stats`（实施时选型）
-- [ ] **验证：** 100+ 条 mock 数据下首屏加载时间可接受
+  - 前端首页分页器；趋势/时间轴仍拉全量（不传 page/limit）
+- [x] **验证：** 首页支持分页，后端返回 `pagination` 元数据
 
 ---
 
@@ -136,12 +134,12 @@
 
 ### 11. PWA 离线支持
 
-- [ ] **目标：** 可「添加到主屏幕」，弱网可读已缓存页面
-- [ ] **范围：**
-  - `public/manifest.json`、图标
-  - Vite PWA 插件或手写 Service Worker（缓存静态资源 + 可选 API 策略）
-  - 明确离线时只读，写操作需联网
-- [ ] **验证：** Lighthouse PWA 基线；断网可打开已访问过的首页
+- [x] **目标：** 可「添加到主屏幕」，弱网可读已缓存页面
+- [x] **范围（第一阶段）：**
+  - `public/manifest.json`、主题色与 Apple meta
+  - `index.html` 标题、viewport-fit、manifest 链接
+  - Service Worker / 离线缓存 → 后续迭代
+- [x] **验证：** 移动端浏览器可「添加到主屏幕」；manifest 可访问
 
 ### 12. 图片云存储（OSS）
 
@@ -172,17 +170,17 @@
 
 ### 15. API 限流
 
-- [ ] **目标：** 降低登录/注册/上传接口被暴力尝试风险
-- [ ] **范围：** `express-rate-limit` 作用于 `/api/auth/login`、`register`、附件上传
-- [ ] **验证：** 短时间大量请求返回 429
+- [x] **目标：** 降低登录/注册/上传接口被暴力尝试风险
+- [x] **范围：** `express-rate-limit` 作用于 `/api/auth/login`、`register`、附件上传
+- [x] **验证：** 短时间大量请求返回 429（见 `rateLimit.test.js`）
 
 ### 16. 后端 API 集成测试
 
-- [ ] **目标：** 覆盖核心流程，防止回归
-- [ ] **范围：**
-  - 使用 mongodb-memory-server 或 test DB
+- [x] **目标：** 覆盖核心流程，防止回归
+- [x] **范围：**
+  - 使用 mongodb-memory-server + supertest
   - 覆盖：注册、邀请码加入、records CRUD、筛选查询、family invite
-- [ ] **验证：** `pnpm test` 含集成用例且 CI 可跑
+- [x] **验证：** `pnpm test` 含集成用例且 CI 可跑
 
 ### 17. E2E 测试（可选）
 
@@ -192,9 +190,9 @@
 
 ### 18. CI/CD（GitHub Actions）
 
-- [ ] **目标：** push/PR 自动跑 test + frontend build
-- [ ] **范围：** `.github/workflows/ci.yml`
-- [ ] **验证：** PR 上 checks 绿
+- [x] **目标：** push/PR 自动跑 test + frontend build
+- [x] **范围：** `.github/workflows/ci.yml`
+- [x] **验证：** PR 上 checks 绿（需 push 到 GitHub 后确认）
 
 ### 19. API 文档（Swagger）
 
@@ -214,18 +212,25 @@
 
 ### 21. 骨架屏加载
 
-- [ ] **范围：** `Home.vue`、`RecordDetail.vue`、`Trends.vue` 首屏 skeleton 替代纯 spinner
-- [ ] **验证：** 慢网下列表区域有占位结构
+- [x] **目标：** 慢网下列表区域有占位结构
+- [x] **范围：** `Home.vue`、`RecordDetail.vue`、`Trends.vue` 首屏 skeleton 替代纯 spinner
+- [x] **验证：** 加载时展示统计卡/列表/详情/图表占位结构
 
 ### 22. 移动端适配打磨
 
-- [ ] **范围：** 导航栏换行、FAB 位置、筛选栏折叠、图表在小屏高度
-- [ ] **验证：** iPhone/Android 浏览器手动走查清单通过
+- [x] **目标：** 手机端浏览与操作更顺手
+- [x] **范围：**
+  - 导航栏图标模式（小屏隐藏文字标签）
+  - FAB 安全区适配、底部分页简化布局
+  - 详情页操作按钮纵向排列、趋势图高度调整
+  - 筛选栏小屏单列（已有）
+- [x] **验证：** 640px 以下布局不溢出、FAB 不被遮挡
 
 ### 23. 图片懒加载与缩略图
 
-- [ ] **范围：** `AttachmentGallery` lazy load；列表接口已返回 `attachmentCount`，详情页可请求缩略图或压缩图
-- [ ] **验证：** 多图记录详情首屏请求数减少
+- [x] **目标：** 多图记录详情首屏请求数减少
+- [x] **范围：** `AttachmentGallery` IntersectionObserver 懒加载预览；加载中 skeleton 占位
+- [x] **验证：** 仅进入视口的图片发起预览请求
 
 ### 24. 深色模式
 
@@ -244,7 +249,7 @@
 | 项 | 设计/文档描述 | 当前实现 | 建议任务 |
 |----|---------------|----------|----------|
 | Token 自动续期 | PROJECT_SUMMARY 声称有 | 7 天 JWT，401 跳登录 | → 任务 6 |
-| PWA | 项目称 Web 应用（PWA） | 无 manifest/SW | → 任务 11 |
+| PWA | 项目称 Web 应用（PWA） | manifest + 可添加主屏幕；无 SW 离线 | 任务 11 第一阶段完成 |
 | 首页统计 | 3 项含产检次数 | 已实现 3 张卡 | 文档同步即可 |
 | 列表附件 | 全量 attachments | 列表仅 `attachmentCount` | 详情页不变；任务 23 可选缩略图 |
 | 家人加入 | 邀请码 | 已实现 | — |

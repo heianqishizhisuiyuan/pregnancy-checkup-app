@@ -181,3 +181,72 @@ export const getCurrentUser = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * 更新个人资料（昵称）
+ * PUT /api/auth/profile
+ */
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { nickname } = req.body;
+    const user = req.user;
+
+    if (!nickname || !nickname.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: '昵称不能为空',
+        },
+      });
+    }
+
+    user.profile = user.profile || {};
+    user.profile.nickname = nickname.trim();
+    await user.save();
+
+    res.json({
+      success: true,
+      data: user.toJSON(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 修改密码
+ * PUT /api/auth/password
+ */
+export const updatePassword = async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+
+    const isMatch = await user.comparePassword(oldPassword);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_PASSWORD',
+          message: '原密码不正确',
+        },
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    const token = generateToken({ userId: user._id });
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: user.toJSON(),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

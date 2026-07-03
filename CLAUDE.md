@@ -72,10 +72,10 @@
 - ✅ 前端生产构建通过
 - ✅ 最小自动化测试脚本已建立
 
-### 下一步
-- ⏳ 完整注册-使用流程测试
-- ⏳ 补充后端 API 集成测试
-- ⏳ 根据实际使用反馈迭代导出、提醒、图片上传等功能
+### 下一步（见 iteration-backlog P2/P3）
+- ⏳ 产检提醒、PWA 离线、OSS 云存储
+- ⏳ PDF 直接下载、Swagger 文档
+- ⏳ E2E 测试（可选）
 
 ## Claude 工作指引
 
@@ -105,12 +105,14 @@
 ## API 端点快速参考
 
 ### 认证
-- POST /api/auth/register - 注册
+- POST /api/auth/register - 注册（可选 inviteCode 加入家庭）
 - POST /api/auth/login - 登录
 - GET /api/auth/me - 获取当前用户
+- PUT /api/auth/profile - 更新昵称
+- PUT /api/auth/password - 修改密码
 
 ### 记录
-- GET /api/records - 获取所有记录
+- GET /api/records - 获取记录（query: keyword, hospital, startDate, endDate, minWeek, maxWeek, page, limit）
 - GET /api/records/:id - 获取单条记录
 - POST /api/records - 创建记录（需要 owner 权限）
 - PUT /api/records/:id - 更新记录（需要 owner 权限）
@@ -119,12 +121,15 @@
 ### 家庭
 - GET /api/family - 获取家庭信息
 - PUT /api/family - 更新家庭信息
+- GET /api/family/invite - 获取邀请码（owner）
+- POST /api/family/invite/regenerate - 重新生成邀请码（owner）
+- GET /api/family/members - 家庭成员列表
 
 ## 注意事项
 
 - 所有日期使用 ISO 8601 格式
 - 密码必须使用 bcrypt 加密
-- JWT Token 过期时间为 7 天
+- JWT Token 过期时间为 7 天；活跃请求时通过 `X-New-Token` 滑动续期
 - 所有 API 响应统一格式：`{ success: boolean, data?: any, error?: { code, message } }`
 - 前端必须在每次请求时携带 JWT Token
 - 权限控制通过后端中间件实现

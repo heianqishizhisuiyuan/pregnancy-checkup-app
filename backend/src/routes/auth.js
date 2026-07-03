@@ -1,7 +1,9 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getCurrentUser } from '../controllers/authController.js';
+import { register, login, getCurrentUser, updateProfile, updatePassword } from '../controllers/authController.js';
 import { authenticate } from '../middlewares/auth.js';
+import { validateRequest } from '../middlewares/validateRequest.js';
+import { authRateLimiter } from '../middlewares/rateLimit.js';
 
 const router = express.Router();
 
@@ -12,6 +14,7 @@ const router = express.Router();
  */
 router.post(
   '/register',
+  authRateLimiter,
   [
     body('username').trim().isLength({ min: 2, max: 50 }).withMessage('用户名必须在2-50个字符之间'),
     body('email').isEmail().withMessage('请输入有效的邮箱'),
@@ -29,6 +32,7 @@ router.post(
  */
 router.post(
   '/login',
+  authRateLimiter,
   [
     body('email').isEmail().withMessage('请输入有效的邮箱'),
     body('password').notEmpty().withMessage('密码不能为空'),
@@ -42,5 +46,36 @@ router.post(
  * @access  Private
  */
 router.get('/me', authenticate, getCurrentUser);
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    更新昵称
+ * @access  Private
+ */
+router.put(
+  '/profile',
+  authenticate,
+  [
+    body('nickname').trim().isLength({ min: 1, max: 50 }).withMessage('昵称必须在1-50个字符之间'),
+  ],
+  validateRequest,
+  updateProfile
+);
+
+/**
+ * @route   PUT /api/auth/password
+ * @desc    修改密码
+ * @access  Private
+ */
+router.put(
+  '/password',
+  authenticate,
+  [
+    body('oldPassword').notEmpty().withMessage('请输入原密码'),
+    body('newPassword').isLength({ min: 6 }).withMessage('新密码至少6个字符'),
+  ],
+  validateRequest,
+  updatePassword
+);
 
 export default router;

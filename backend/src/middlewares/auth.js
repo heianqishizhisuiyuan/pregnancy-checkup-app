@@ -1,4 +1,4 @@
-import { verifyToken } from '../utils/jwt.js';
+import { verifyToken, generateToken } from '../utils/jwt.js';
 import User from '../models/User.js';
 
 /**
@@ -40,6 +40,11 @@ export const authenticate = async (req, res, next) => {
 
     // 将用户信息附加到请求对象
     req.user = user;
+
+    // 滑动续期：每次有效请求签发新 token
+    const newToken = generateToken({ userId: user._id });
+    res.setHeader('X-New-Token', newToken);
+
     next();
   } catch (error) {
     return res.status(401).json({

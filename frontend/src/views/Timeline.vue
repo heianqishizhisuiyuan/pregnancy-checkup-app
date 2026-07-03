@@ -1,8 +1,12 @@
 <template>
   <div class="timeline-page">
-    <div class="header">
-      <h1>产检时间轴</h1>
-    </div>
+    <header class="page-header">
+      <el-button @click="goBack" text :icon="ArrowLeft">返回</el-button>
+      <div class="header-text">
+        <h1>产检时间轴</h1>
+        <p v-if="records.length > 0" class="header-hint">共 {{ records.length }} 次产检</p>
+      </div>
+    </header>
 
     <div v-if="loading" class="loading">
       <el-icon class="is-loading"><Loading /></el-icon>
@@ -29,23 +33,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Loading } from '@element-plus/icons-vue';
+import { ArrowLeft, Loading } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import TimelineItem from '@/components/TimelineItem.vue';
 import { getRecords } from '@/api/record';
+import { useRecordStore } from '@/stores/record';
 
 const router = useRouter();
+const recordStore = useRecordStore();
 const loading = ref(true);
-const records = ref([]);
+const records = computed(() => recordStore.records);
 
-// 获取记录列表
 const fetchRecords = async () => {
+  if (recordStore.records.length > 0) {
+    loading.value = false;
+  }
+
   try {
-    loading.value = true;
     const response = await getRecords();
-    records.value = response.data;
+    if (response.success) {
+      recordStore.setRecords(response.data);
+    }
   } catch (error) {
     console.error('获取记录失败:', error);
     ElMessage.error('获取记录失败');
@@ -54,12 +64,14 @@ const fetchRecords = async () => {
   }
 };
 
-// 跳转到详情页
+const goBack = () => {
+  router.push('/');
+};
+
 const goToDetail = (recordId) => {
   router.push(`/record/${recordId}`);
 };
 
-// 跳转到添加记录页
 const goToAddRecord = () => {
   router.push('/record/new');
 };
@@ -76,40 +88,38 @@ onMounted(() => {
   padding: 24px;
 }
 
-.header {
+.page-header {
   max-width: 800px;
-  margin: 0 auto 32px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
-.header h1 {
-  font-size: 32px;
+.header-text h1 {
+  font-size: 1.5rem;
   font-weight: 600;
   color: #1F2421;
   margin: 0;
 }
 
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 60px 20px;
-  color: #5C635D;
+.header-hint {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  color: #6B7280;
 }
 
+.loading,
 .empty {
-  display: flex;
-  justify-content: center;
-  padding: 60px 20px;
+  max-width: 800px;
+  margin: 48px auto;
+  text-align: center;
+  color: #6B7280;
 }
 
 .timeline-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 24px;
-  background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(31, 36, 33, 0.04);
 }
 
 @media (max-width: 768px) {
@@ -117,12 +127,8 @@ onMounted(() => {
     padding: 16px;
   }
 
-  .header h1 {
-    font-size: 24px;
-  }
-
-  .timeline-container {
-    padding: 16px;
+  .header-text h1 {
+    font-size: 1.25rem;
   }
 }
 </style>

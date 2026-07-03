@@ -10,10 +10,7 @@
     </header>
 
     <main class="detail-main">
-      <div v-if="loading" class="loading">
-        <el-icon class="is-loading"><Loading /></el-icon>
-        <span>加载中...</span>
-      </div>
+      <RecordDetailSkeleton v-if="loading" />
 
       <div v-else-if="record" class="record-detail">
         <!-- 基本信息卡片 -->
@@ -159,12 +156,13 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Edit, Delete, Loading, Odometer, TrendCharts, Compass, Crop, DataLine } from '@element-plus/icons-vue';
+import { ArrowLeft, Edit, Delete, Odometer, TrendCharts, Compass, Crop, DataLine } from '@element-plus/icons-vue';
 import { getRecordById, deleteRecord as deleteRecordApi } from '@/api/record';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { formatDate, formatGestationalAge } from '@/utils/date';
 import AttachmentGallery from '@/components/AttachmentGallery.vue';
+import RecordDetailSkeleton from '@/components/skeletons/RecordDetailSkeleton.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -279,17 +277,6 @@ onMounted(() => {
   max-width: 900px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-lg);
-}
-
-/* 加载状态 */
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-xl);
-  gap: var(--spacing-sm);
-  color: var(--color-text-secondary);
 }
 
 /* 记录详情 */
@@ -448,5 +435,26 @@ onMounted(() => {
 
 .empty-attachments {
   padding: var(--spacing-xl) 0;
+}
+
+@media (max-width: 640px) {
+  .detail-main {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .info-card,
+  .vitals-card,
+  .notes-card,
+  .attachments-card {
+    padding: var(--spacing-lg);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
 }
 </style>

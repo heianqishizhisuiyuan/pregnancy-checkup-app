@@ -195,20 +195,24 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
 import { uploadAttachmentEntry } from '@/api/attachment';
 import { createRecord, updateRecord, getRecordById } from '@/api/record';
+import { getFamily } from '@/api/family';
 import AttachmentGallery from '@/components/AttachmentGallery.vue';
 import AttachmentUpload from '@/components/AttachmentUpload.vue';
 import { useRecordStore } from '@/stores/record';
+import { useFamilyStore } from '@/stores/family';
 import { uploadQueuedAttachments } from '@/utils/attachmentQueue';
+import { calculateGestationalAge, formatDate } from '@/utils/date';
 
 const router = useRouter();
 const route = useRoute();
 const recordStore = useRecordStore();
+const familyStore = useFamilyStore();
 
 const formRef = ref(null);
 const loading = ref(false);
@@ -374,8 +378,49 @@ const handleBack = () => {
   router.back();
 };
 
+const applyGestationalFromDate = (dateStr) => {
+  const lastPeriod = familyStore.family?.pregnancyInfo?.lastPeriod;
+  if (!dateStr || !lastPeriod) return;
+
+  const { weeks, days } = calculateGestationalAge(lastPeriod, dateStr);
+  if (weeks >= 0 && weeks <= 45) {
+    formData.gestationalWeek = weeks;
+    formData.gestationalDay = days;
+  }
+};
+
+const initNewRecord = async () => {
+  formData.checkupDate = formatDate(new Date());
+
+  if (!familyStore.family) {
+    try {
+      const response = await getFamily();
+      if (response.success) {
+        familyStore.setFamily(response.data);
+      }
+    } catch {
+      // 无家庭信息时仍可手动填写
+    }
+  }
+
+  applyGestationalFromDate(formData.checkupDate);
+};
+
+watch(
+  () => formData.checkupDate,
+  (dateStr) => {
+    if (!isEditMode.value) {
+      applyGestationalFromDate(dateStr);
+    }
+  }
+);
+
 onMounted(() => {
-  loadRecord();
+  if (isEditMode.value) {
+    loadRecord();
+  } else {
+    initNewRecord();
+  }
 });
 </script>
 

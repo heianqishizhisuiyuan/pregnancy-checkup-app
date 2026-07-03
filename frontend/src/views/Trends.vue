@@ -10,10 +10,7 @@
       </div>
     </header>
 
-    <div v-if="loading" class="loading">
-      <el-icon class="is-loading"><Loading /></el-icon>
-      加载中...
-    </div>
+    <ChartCardsSkeleton v-if="loading" />
 
     <div v-else-if="records.length === 0" class="empty">
       <el-empty description="暂无记录，无法生成趋势图">
@@ -46,10 +43,11 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { ArrowLeft, Loading } from '@element-plus/icons-vue';
+import { ArrowLeft } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 import { getRecords } from '@/api/record';
 import { buildVitalChartSeries, buildLineChartOption } from '@/utils/chartData';
+import ChartCardsSkeleton from '@/components/skeletons/ChartCardsSkeleton.vue';
 
 const router = useRouter();
 const loading = ref(true);
@@ -188,15 +186,6 @@ onBeforeUnmount(() => {
   color: var(--color-text-secondary);
 }
 
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-xl);
-  color: var(--color-text-secondary);
-}
-
 .empty {
   max-width: 480px;
   margin: var(--spacing-xl) auto;
@@ -234,8 +223,12 @@ onBeforeUnmount(() => {
     padding: var(--spacing-md);
   }
 
+  .header-text h1 {
+    font-size: 1.25rem;
+  }
+
   .chart-body {
-    height: 260px;
+    height: 220px;
   }
 }
 </style>

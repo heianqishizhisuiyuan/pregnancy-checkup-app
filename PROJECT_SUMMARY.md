@@ -4,7 +4,7 @@
 
 这是一个完整的全栈产检记录管理系统，帮助孕妇及其家人记录和管理产检过程。
 
-**项目状态**: ✅ **MVP 开发 100% 完成**
+**项目状态**: ✅ **MVP + 第二阶段 + 高价值迭代已完成**，持续小步优化中
 
 **技术栈**:
 - **后端**: Node.js + Express + MongoDB + JWT
@@ -31,7 +31,7 @@
 - [x] 用户注册（自动创建家庭）
 - [x] 用户登录（JWT Token）
 - [x] 密码加密存储（bcrypt）
-- [x] Token 自动续期
+- [x] JWT 滑动续期（活跃使用时自动延长有效期）
 - [x] 登录状态持久化
 
 ### 2. 产检记录管理 ✓
@@ -70,7 +70,22 @@
 - [x] 文件存储到本地文件系统
 - [x] 文件访问权限验证
 
-### 7. 时间轴展示 ✓ (第二阶段)
+### 7. 家人邀请与协作 ✓
+- [x] 邀请码注册加入家庭
+- [x] 设置页复制 / 重新生成邀请码
+- [x] 家庭成员列表
+
+### 8. 搜索、趋势与导出 ✓
+- [x] 记录关键词 / 医院 / 日期 / 孕周筛选
+- [x] 首页分页列表
+- [x] 数据趋势图表（`/trends`）
+- [x] Excel 导出、PDF 打印导出
+
+### 9. 账号与个人资料 ✓
+- [x] 修改昵称
+- [x] 修改密码
+
+### 10. 时间轴展示 ✓ (第二阶段)
 - [x] 独立的时间轴视图页面
 - [x] 垂直时间线布局
 - [x] 显示图片数量角标
@@ -236,12 +251,14 @@ pnpm dev
 POST   /api/auth/register   - 用户注册
 POST   /api/auth/login      - 用户登录
 GET    /api/auth/me         - 获取当前用户信息
+PUT    /api/auth/profile    - 更新昵称
+PUT    /api/auth/password   - 修改密码
 ```
 
 ### 记录 API（需要认证）
 
 ```
-GET    /api/records         - 获取所有记录
+GET    /api/records         - 获取记录（支持 keyword/hospital/日期/孕周筛选；page/limit 分页）
 GET    /api/records/:id     - 获取单条记录
 POST   /api/records         - 创建记录（仅 owner）
 PUT    /api/records/:id     - 更新记录（仅 owner）
@@ -253,6 +270,9 @@ DELETE /api/records/:id     - 删除记录（仅 owner）
 ```
 GET    /api/family          - 获取家庭信息
 PUT    /api/family          - 更新家庭信息（仅 owner）
+GET    /api/family/invite   - 获取邀请码（仅 owner）
+POST   /api/family/invite/regenerate - 重新生成邀请码（仅 owner）
+GET    /api/family/members  - 家庭成员列表
 ```
 
 ### 系统 API
@@ -370,7 +390,9 @@ ee268c6 初始化项目：添加设计文档和项目结构
 
 **[`docs/superpowers/plans/2026-07-03-iteration-backlog.md`](docs/superpowers/plans/2026-07-03-iteration-backlog.md)**
 
-2026-07-03 已完成的高价值项：家人邀请码、记录筛选、数据趋势图、Excel/PDF 导出。
+2026-07-03 已完成的高价值项：家人邀请码、记录筛选、数据趋势图、Excel/PDF 导出、分页、自动孕周、上传超时、健康检查、备份脚本、个人资料、JWT 滑动续期、API 限流、后端集成测试、GitHub Actions CI。
+
+待办见 backlog P2/P3：产检提醒、PWA、OSS、E2E、Swagger 等。
 
 ---
 

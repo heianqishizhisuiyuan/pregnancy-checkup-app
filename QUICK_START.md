@@ -172,6 +172,18 @@ pnpm install
 3. **首次使用需要注册**：注册后会自动创建家庭
 4. **数据存储在本地**：MongoDB 数据库位于本地
 
+### 数据备份（生产环境建议）
+
+```bash
+# 在服务器上执行（需已安装 mongodb-database-tools）
+bash scripts/backup.sh
+
+# 可选 cron 示例：每天凌晨 3 点备份
+# 0 3 * * * APP_DIR=/var/www/pregnancy-checkup-app bash /var/www/pregnancy-checkup-app/scripts/backup.sh
+```
+
+恢复：`bash scripts/restore.sh /path/to/backup_YYYYMMDD_HHMMSS.tar.gz`
+
 ---
 
 ## 🎉 恭喜！

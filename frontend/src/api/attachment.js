@@ -9,6 +9,7 @@ export function uploadAttachments(recordId, formData) {
     url: `/records/${recordId}/attachments`,
     method: 'post',
     data: formData,
+    timeout: 60000,
     headers: {
       'Content-Type': 'multipart/form-data'
     }
