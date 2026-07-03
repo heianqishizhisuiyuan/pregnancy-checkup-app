@@ -57,7 +57,7 @@ if (-not $DeployOnly) {
     git push origin $BRANCH
 }
 
-$deployFlag = if ($Full) { "" } else { " --fast" }
+$deployFlag = if ($Full) { " --full" } else { " --fast" }
 $remoteCmd = "cd /var/www/pregnancy-checkup-app && git pull origin $BRANCH && bash scripts/deploy-app.sh$deployFlag"
 
 Write-Step "deploy on server"
