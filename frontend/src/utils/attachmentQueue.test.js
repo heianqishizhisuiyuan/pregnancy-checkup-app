@@ -5,6 +5,9 @@ import {
   assertAttachmentRecordId,
   createQueuedAttachmentEntry,
   getRemainingAttachmentSlots,
+  normalizeAttachmentTags,
+  removeQueuedAttachmentEntry,
+  updateQueuedAttachmentEntry,
   uploadQueuedAttachments
 } from './attachmentQueue.js';
 
@@ -66,6 +69,65 @@ test('appendQueuedAttachmentEntries accumulates multiple selected files onto the
       ['second.png', '报告', ['new']]
     ]
   );
+});
+
+test('updateQueuedAttachmentEntry updates only the matching queued item metadata', () => {
+  const originalQueue = [
+    createQueuedAttachmentEntry(
+      { name: 'first.png', size: 20, lastModified: 2 },
+      { id: 'first', category: 'B超', tags: ['12周'] }
+    ),
+    createQueuedAttachmentEntry(
+      { name: 'second.png', size: 30, lastModified: 3 },
+      { id: 'second', category: '血常规', tags: ['空腹'] }
+    )
+  ];
+
+  const nextQueue = updateQueuedAttachmentEntry(originalQueue, 'second', {
+    category: 'NT检查',
+    tags: ['复查', '重点']
+  });
+
+  assert.deepEqual(
+    nextQueue.map((entry) => [entry.id, entry.category, entry.tags]),
+    [
+      ['first', 'B超', ['12周']],
+      ['second', 'NT检查', ['复查', '重点']]
+    ]
+  );
+  assert.notEqual(nextQueue, originalQueue);
+  assert.equal(nextQueue[0], originalQueue[0]);
+  assert.notEqual(nextQueue[1], originalQueue[1]);
+});
+
+test('removeQueuedAttachmentEntry removes only the matching queued item', () => {
+  const originalQueue = [
+    createQueuedAttachmentEntry(
+      { name: 'first.png', size: 20, lastModified: 2 },
+      { id: 'first' }
+    ),
+    createQueuedAttachmentEntry(
+      { name: 'second.png', size: 30, lastModified: 3 },
+      { id: 'second' }
+    )
+  ];
+
+  const nextQueue = removeQueuedAttachmentEntry(originalQueue, 'first');
+
+  assert.deepEqual(nextQueue.map((entry) => entry.id), ['second']);
+  assert.notEqual(nextQueue, originalQueue);
+});
+
+test('normalizeAttachmentTags trims separators and removes empty tags', () => {
+  assert.deepEqual(
+    normalizeAttachmentTags(' 12周,  复查 , , 空腹  '),
+    ['12周', '复查', '空腹']
+  );
+  assert.deepEqual(
+    normalizeAttachmentTags([' 复查 ', '', '空腹', '复查']),
+    ['复查', '空腹']
+  );
+  assert.deepEqual(normalizeAttachmentTags(''), []);
 });
 
 test('getRemainingAttachmentSlots subtracts queued items from the 20-attachment cap', () => {

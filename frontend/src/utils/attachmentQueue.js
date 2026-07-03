@@ -23,6 +23,28 @@ export function appendQueuedAttachmentEntries(queue, files, overrides = {}) {
   ];
 }
 
+export function updateQueuedAttachmentEntry(queue, entryId, updates = {}) {
+  return queue.map((entry) => {
+    if (entry.id !== entryId) {
+      return entry;
+    }
+
+    return {
+      ...entry,
+      ...updates
+    };
+  });
+}
+
+export function removeQueuedAttachmentEntry(queue, entryId) {
+  return queue.filter((entry) => entry.id !== entryId);
+}
+
+export function normalizeAttachmentTags(tags) {
+  const rawTags = Array.isArray(tags) ? tags : String(tags || '').split(',');
+  return [...new Set(rawTags.map((tag) => tag.trim()).filter(Boolean))];
+}
+
 export function getRemainingAttachmentSlots(existingCount = 0, queuedCount = 0, maxAttachments = MAX_ATTACHMENTS) {
   return Math.max(0, maxAttachments - existingCount - queuedCount);
 }
