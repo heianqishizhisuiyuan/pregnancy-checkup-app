@@ -250,3 +250,36 @@ export const updatePassword = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * 校验邀请码（注册前预检）
+ * POST /api/auth/validate-invite
+ */
+export const validateInviteCode = async (req, res, next) => {
+  try {
+    const { inviteCode } = req.body;
+    if (!inviteCode?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_INVITE_CODE', message: '请输入邀请码' },
+      });
+    }
+
+    const normalizedCode = inviteCode.trim().toUpperCase();
+    const family = await Family.findOne({ inviteCode: normalizedCode });
+
+    if (!family) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'INVALID_INVITE_CODE', message: '邀请码无效，请检查后重试' },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { familyName: family.name },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

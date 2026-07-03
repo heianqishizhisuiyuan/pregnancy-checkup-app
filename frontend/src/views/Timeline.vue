@@ -18,12 +18,15 @@
     </div>
 
     <div v-else class="timeline-container">
-      <TimelineItem
-        v-for="record in records"
-        :key="record._id"
-        :record="record"
-        @click="goToDetail"
-      />
+      <template v-for="group in groupedRecords" :key="group.key">
+        <div class="month-header">{{ group.label }}</div>
+        <TimelineItem
+          v-for="record in group.records"
+          :key="record._id"
+          :record="record"
+          @click="goToDetail"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -37,12 +40,14 @@ import TimelineListSkeleton from '@/components/skeletons/TimelineListSkeleton.vu
 import { getRecords } from '@/api/record';
 import { useRecordStore } from '@/stores/record';
 import { useAuthStore } from '@/stores/auth';
+import { groupRecordsByMonth } from '@/utils/timelineGroups.js';
 
 const router = useRouter();
 const recordStore = useRecordStore();
 const authStore = useAuthStore();
 const loading = ref(true);
 const records = computed(() => recordStore.records);
+const groupedRecords = computed(() => groupRecordsByMonth(records.value));
 const isOwner = computed(() => authStore.isOwner);
 
 const emptyDescription = computed(() => (
@@ -113,6 +118,18 @@ onMounted(() => {
 .timeline-container {
   max-width: 800px;
   margin: 0 auto;
+}
+
+.month-header {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: var(--spacing-lg) 0 var(--spacing-md);
+  padding-left: 40px;
+}
+
+.month-header:first-child {
+  margin-top: 0;
 }
 
 @media (max-width: 768px) {

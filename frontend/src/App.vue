@@ -1,8 +1,17 @@
 <template>
+  <OfflineBanner />
   <AppLayout v-if="useLayout">
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <Transition name="fade-slide" mode="out-in">
+        <component :is="Component" />
+      </Transition>
+    </router-view>
   </AppLayout>
-  <router-view v-else />
+  <router-view v-else v-slot="{ Component }">
+    <Transition name="fade-slide" mode="out-in">
+      <component :is="Component" />
+    </Transition>
+  </router-view>
 </template>
 
 <script setup>
@@ -11,6 +20,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { getCurrentUser } from '@/api/auth';
 import AppLayout from '@/components/AppLayout.vue';
+import OfflineBanner from '@/components/OfflineBanner.vue';
 
 const route = useRoute();
 const router = useRouter();

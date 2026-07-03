@@ -7,10 +7,12 @@
           <span class="app-name">孕期记录</span>
         </div>
         <div class="header-actions">
-          <UserAvatar :name="displayName" size="sm" />
-          <span class="username">{{ displayName }}</span>
-          <el-tag v-if="!isOwner" size="small" type="info" class="role-tag">只读家人</el-tag>
-          <el-button text @click="handleLogout">退出</el-button>
+          <ThemeToggle />
+          <div class="user-chip" @click="goProfile">
+            <UserAvatar :name="displayName" size="sm" />
+            <span class="username">{{ displayName }}</span>
+          </div>
+          <el-tag v-if="!isOwner" size="small" type="info" class="role-tag hide-mobile">只读家人</el-tag>
         </div>
       </div>
     </header>
@@ -38,10 +40,10 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import { House, Clock, TrendCharts, User } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import UserAvatar from '@/components/UserAvatar.vue';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -66,18 +68,9 @@ const goHome = () => {
   }
 };
 
-const handleLogout = async () => {
-  try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    });
-    authStore.logout();
-    ElMessage.success('已退出登录');
-    router.push({ name: 'Login' });
-  } catch {
-    // 用户取消
+const goProfile = () => {
+  if (route.name !== 'Profile') {
+    router.push({ name: 'Profile' });
   }
 };
 </script>
@@ -123,6 +116,7 @@ const handleLogout = async () => {
 }
 
 .app-name {
+  font-family: var(--font-serif);
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -134,6 +128,20 @@ const handleLogout = async () => {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+
+.user-chip:hover {
+  background: var(--color-accent-light);
 }
 
 .username {
@@ -184,6 +192,16 @@ const handleLogout = async () => {
 .tab-label {
   font-size: 0.7rem;
   line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none;
+  }
+
+  .username {
+    display: none;
+  }
 }
 
 @media (min-width: 768px) {

@@ -53,3 +53,14 @@ export function updatePassword(data) {
     data,
   });
 }
+
+/**
+ * 校验邀请码
+ */
+export function validateInviteCode(inviteCode) {
+  return request({
+    url: '/auth/validate-invite',
+    method: 'post',
+    data: { inviteCode },
+  });
+}

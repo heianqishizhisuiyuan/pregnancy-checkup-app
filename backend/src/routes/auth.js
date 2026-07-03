@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getCurrentUser, updateProfile, updatePassword } from '../controllers/authController.js';
+import { register, login, getCurrentUser, updateProfile, updatePassword, validateInviteCode } from '../controllers/authController.js';
 import { authenticate } from '../middlewares/auth.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
 import { authRateLimiter } from '../middlewares/rateLimit.js';
@@ -38,6 +38,20 @@ router.post(
     body('password').notEmpty().withMessage('密码不能为空'),
   ],
   login
+);
+
+/**
+ * @route   POST /api/auth/validate-invite
+ * @desc    校验邀请码（注册前预检）
+ * @access  Public
+ */
+router.post(
+  '/validate-invite',
+  authRateLimiter,
+  [
+    body('inviteCode').trim().isLength({ min: 6, max: 12 }).withMessage('邀请码格式无效'),
+  ],
+  validateInviteCode
 );
 
 /**

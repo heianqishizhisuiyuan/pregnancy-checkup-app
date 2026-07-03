@@ -4,7 +4,7 @@
       <div class="header-text">
         <h1>数据趋势</h1>
         <p v-if="records.length > 0" class="header-hint">
-          共 {{ records.length }} 次产检 · 悬停查看详情{{ records.length > 12 ? '，可滚轮缩放' : '' }}
+          共 {{ records.length }} 次产检 · 悬停查看详情 · 点击数据点跳转记录{{ records.length > 12 ? ' · 可滚轮缩放' : '' }}
         </p>
       </div>
     </header>
@@ -17,24 +17,30 @@
       </el-empty>
     </div>
 
+    <div v-else-if="!hasAnyChartData" class="empty">
+      <el-empty description="暂无生理指标数据，无法生成趋势图">
+        <el-button type="primary" @click="goBack">返回首页</el-button>
+      </el-empty>
+    </div>
+
     <div v-else class="charts-stack">
-      <section class="chart-card">
+      <section v-if="showWeightChart" class="chart-card">
         <h2 class="chart-title">体重变化</h2>
         <div ref="weightChartRef" class="chart-body"></div>
       </section>
-      <section class="chart-card">
+      <section v-if="showBpChart" class="chart-card">
         <h2 class="chart-title">血压变化</h2>
         <div ref="bpChartRef" class="chart-body"></div>
       </section>
-      <section class="chart-card">
+      <section v-if="showFundalChart" class="chart-card">
         <h2 class="chart-title">宫高变化</h2>
         <div ref="fundalChartRef" class="chart-body"></div>
       </section>
-      <section class="chart-card">
+      <section v-if="showAbdominalChart" class="chart-card">
         <h2 class="chart-title">腹围变化</h2>
         <div ref="abdominalChartRef" class="chart-body"></div>
       </section>
-      <section class="chart-card">
+      <section v-if="showFhrChart" class="chart-card">
         <h2 class="chart-title">胎心率变化</h2>
         <div ref="fhrChartRef" class="chart-body"></div>
       </section>
@@ -43,17 +49,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import * as echarts from 'echarts';
 import { getRecords } from '@/api/record';
-import { buildVitalChartSeries, buildLineChartOption } from '@/utils/chartData';
+import { useRecordStore } from '@/stores/record';
+import { buildVitalChartSeries, buildLineChartOption, seriesHasData } from '@/utils/chartData';
 import ChartCardsSkeleton from '@/components/skeletons/ChartCardsSkeleton.vue';
 
 const router = useRouter();
+const recordStore = useRecordStore();
 const loading = ref(true);
-const records = ref([]);
+const records = computed(() => recordStore.records);
 
 const weightChartRef = ref(null);
 const bpChartRef = ref(null);
@@ -63,15 +71,53 @@ const fhrChartRef = ref(null);
 
 const chartInstances = [];
 
+const chartSeries = computed(() => buildVitalChartSeries(records.value));
+
+const showWeightChart = computed(() => seriesHasData(chartSeries.value.weight));
+const showBpChart = computed(() =>
+  seriesHasData(chartSeries.value.systolic) || seriesHasData(chartSeries.value.diastolic)
+);
+const showFundalChart = computed(() => seriesHasData(chartSeries.value.fundalHeight));
+const showAbdominalChart = computed(() => seriesHasData(chartSeries.value.abdominalCircumference));
+const showFhrChart = computed(() => seriesHasData(chartSeries.value.fetalHeartRate));
+
+const hasAnyChartData = computed(() =>
+  showWeightChart.value ||
+  showBpChart.value ||
+  showFundalChart.value ||
+  showAbdominalChart.value ||
+  showFhrChart.value
+);
+
+const bindChartClick = (chart, sortedRecords) => {
+  chart.on('click', (params) => {
+    const recordId = sortedRecords[params.dataIndex]?._id;
+    if (recordId) {
+      router.push({ name: 'RecordDetail', params: { id: recordId } });
+    }
+  });
+};
+
 const renderCharts = () => {
   chartInstances.forEach((chart) => chart.dispose());
   chartInstances.length = 0;
 
-  const { labels, meta, weight, systolic, diastolic, fundalHeight, abdominalCircumference, fetalHeartRate } =
-    buildVitalChartSeries(records.value);
+  const {
+    labels,
+    meta,
+    sortedRecords,
+    weight,
+    systolic,
+    diastolic,
+    fundalHeight,
+    abdominalCircumference,
+    fetalHeartRate,
+  } = chartSeries.value;
 
-  const configs = [
-    {
+  const configs = [];
+
+  if (showWeightChart.value) {
+    configs.push({
       el: weightChartRef.value,
       option: buildLineChartOption({
         labels,
@@ -79,8 +125,11 @@ const renderCharts = () => {
         yAxisName: 'kg',
         series: [{ name: '体重', data: weight }],
       }),
-    },
-    {
+    });
+  }
+
+  if (showBpChart.value) {
+    configs.push({
       el: bpChartRef.value,
       option: buildLineChartOption({
         labels,
@@ -88,13 +137,20 @@ const renderCharts = () => {
         yAxisName: 'mmHg',
         color: ['#C4612F', '#8A918C'],
         showLegend: true,
+        referenceRanges: [
+          { min: 90, max: 140 },
+          { min: 60, max: 90 },
+        ],
         series: [
           { name: '收缩压', data: systolic },
           { name: '舒张压', data: diastolic },
         ],
       }),
-    },
-    {
+    });
+  }
+
+  if (showFundalChart.value) {
+    configs.push({
       el: fundalChartRef.value,
       option: buildLineChartOption({
         labels,
@@ -102,8 +158,11 @@ const renderCharts = () => {
         yAxisName: 'cm',
         series: [{ name: '宫高', data: fundalHeight }],
       }),
-    },
-    {
+    });
+  }
+
+  if (showAbdominalChart.value) {
+    configs.push({
       el: abdominalChartRef.value,
       option: buildLineChartOption({
         labels,
@@ -112,22 +171,27 @@ const renderCharts = () => {
         color: '#8A918C',
         series: [{ name: '腹围', data: abdominalCircumference }],
       }),
-    },
-    {
+    });
+  }
+
+  if (showFhrChart.value) {
+    configs.push({
       el: fhrChartRef.value,
       option: buildLineChartOption({
         labels,
         meta,
         yAxisName: '次/分',
+        referenceRanges: [{ min: 110, max: 160 }],
         series: [{ name: '胎心率', data: fetalHeartRate }],
       }),
-    },
-  ];
+    });
+  }
 
   configs.forEach(({ el, option }) => {
     if (!el) return;
     const chart = echarts.init(el);
     chart.setOption(option);
+    bindChartClick(chart, sortedRecords);
     chartInstances.push(chart);
   });
 };
@@ -137,11 +201,14 @@ const handleResize = () => {
 };
 
 const loadRecords = async () => {
-  loading.value = true;
+  if (recordStore.records.length > 0) {
+    loading.value = false;
+  }
+
   try {
     const res = await getRecords();
     if (res.success) {
-      records.value = res.data;
+      recordStore.setRecords(res.data);
     }
   } catch (error) {
     console.error('Failed to load records for trends:', error);
@@ -150,7 +217,7 @@ const loadRecords = async () => {
     loading.value = false;
   }
 
-  if (records.value.length > 0) {
+  if (records.value.length > 0 && hasAnyChartData.value) {
     await nextTick();
     renderCharts();
   }

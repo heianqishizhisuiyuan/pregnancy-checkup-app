@@ -48,6 +48,7 @@ export function buildVitalChartSeries(records) {
 
   sorted.forEach((record) => {
     meta.push({
+      recordId: record._id,
       date: dayjs(record.checkupDate).format('YYYY-MM-DD'),
       gestational: formatGestationalAge(record.gestationalWeek, record.gestationalDay),
     });
@@ -64,6 +65,7 @@ export function buildVitalChartSeries(records) {
   return {
     labels,
     meta,
+    sortedRecords: sorted,
     weight,
     systolic,
     diastolic,
@@ -71,6 +73,11 @@ export function buildVitalChartSeries(records) {
     abdominalCircumference,
     fetalHeartRate,
   };
+}
+
+/** 判断序列是否有有效数据点 */
+export function seriesHasData(data = []) {
+  return data.some((v) => v != null && v !== '');
 }
 
 /**
@@ -83,11 +90,49 @@ export function buildLineChartOption({
   yAxisName,
   color = '#C4612F',
   showLegend = false,
+  referenceRanges = [],
 }) {
   const count = labels.length;
   const dense = count > 12;
   const colors = Array.isArray(color) ? color : [color];
   const labelShowIndexes = buildAxisLabelShowIndexes(count);
+
+  const buildSeriesItem = (item, idx) => ({
+    ...item,
+    type: 'line',
+    smooth: 0.35,
+    connectNulls: false,
+    showSymbol: !dense,
+    symbolSize: dense ? 0 : 6,
+    lineStyle: { width: 2.5, cap: 'round' },
+    emphasis: {
+      focus: 'series',
+      showSymbol: true,
+      symbolSize: 8,
+    },
+    ...(series.length === 1 && {
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(196, 97, 47, 0.14)' },
+            { offset: 1, color: 'rgba(196, 97, 47, 0.02)' },
+          ],
+        },
+      },
+    }),
+    ...(referenceRanges[idx] && {
+      markArea: {
+        silent: true,
+        itemStyle: { color: 'rgba(34, 197, 94, 0.08)' },
+        data: [[
+          { yAxis: referenceRanges[idx].min },
+          { yAxis: referenceRanges[idx].max },
+        ]],
+      },
+    }),
+  });
 
   return {
     ...(showLegend && {
@@ -115,10 +160,11 @@ export function buildLineChartOption({
         const idx = params[0].dataIndex;
         const point = meta?.[idx];
         const header = point ? `${point.date} · ${point.gestational}` : params[0].axisValue;
+        const clickHint = point?.recordId ? '<div style="font-size:11px;color:#8A918C;margin-top:4px">点击查看详情</div>' : '';
         const lines = params
           .filter((p) => p.value != null && p.value !== '')
           .map((p) => `${p.marker} ${p.seriesName}：<strong>${p.value}</strong> ${yAxisName}`);
-        return `<div style="font-weight:600;margin-bottom:6px">${header}</div>${lines.join('<br/>')}`;
+        return `<div style="font-weight:600;margin-bottom:6px">${header}</div>${lines.join('<br/>')}${clickHint}`;
       },
     },
     grid: {
@@ -154,35 +200,7 @@ export function buildLineChartOption({
       axisLabel: { color: '#8A918C', fontSize: 11 },
       splitLine: { lineStyle: { color: '#F0ECE4', type: 'dashed' } },
     },
-    series: series.map((item) => ({
-      ...item,
-      type: 'line',
-      smooth: 0.35,
-      connectNulls: false,
-      showSymbol: !dense,
-      symbolSize: dense ? 0 : 6,
-      lineStyle: { width: 2.5, cap: 'round' },
-      emphasis: {
-        focus: 'series',
-        showSymbol: true,
-        symbolSize: 8,
-      },
-      ...(series.length === 1 && {
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(196, 97, 47, 0.14)' },
-              { offset: 1, color: 'rgba(196, 97, 47, 0.02)' },
-            ],
-          },
-        },
-      }),
-    })),
+    series: series.map((item, idx) => buildSeriesItem(item, idx)),
     color: colors,
   };
 }

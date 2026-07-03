@@ -1,8 +1,59 @@
 <template>
   <div class="profile-container">
     <div class="profile-card">
-      <div class="card-header">
-        <h1 class="title">我的</h1>
+      <div class="profile-header">
+        <UserAvatar :name="displayName" size="lg" />
+        <div class="profile-identity">
+          <h1 class="nickname">{{ displayName }}</h1>
+          <el-tag size="small" :type="isOwner ? 'warning' : 'info'">
+            {{ isOwner ? '主账号' : '只读家人' }}
+          </el-tag>
+        </div>
+        <ThemeToggle />
+      </div>
+
+      <div v-if="familyLoading" class="section-loading">
+        <el-skeleton :rows="3" animated />
+      </div>
+
+      <div v-else-if="familyStore.family" class="family-summary">
+        <el-divider content-position="left">家庭概览</el-divider>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">家庭名称</span>
+            <span class="summary-value">{{ familyStore.family.name }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">当前孕周</span>
+            <span class="summary-value">{{ gestationalAgeText }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">下次产检</span>
+            <span class="summary-value">{{ nextCheckupText }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="members.length" class="members-section">
+        <el-divider content-position="left">家庭成员</el-divider>
+        <div class="members-list">
+          <div
+            v-for="member in members"
+            :key="member.userId?._id || member.userId"
+            class="member-item"
+          >
+            <UserAvatar
+              :name="member.userId?.profile?.nickname || member.userId?.username || '?'"
+              size="sm"
+            />
+            <span class="member-name">
+              {{ member.userId?.profile?.nickname || member.userId?.username || '未知用户' }}
+            </span>
+            <el-tag size="small" :type="member.role === 'owner' ? 'warning' : 'info'">
+              {{ member.role === 'owner' ? '主账号' : '家人' }}
+            </el-tag>
+          </div>
+        </div>
       </div>
 
       <div v-if="isOwner" class="quick-links">
@@ -78,6 +129,12 @@
           </el-button>
         </el-form-item>
       </el-form>
+
+      <div class="logout-section">
+        <el-button type="danger" plain @click="handleLogout">
+          退出登录
+        </el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -85,18 +142,41 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import dayjs from 'dayjs';
 import { useAuthStore } from '@/stores/auth';
+import { useFamilyStore } from '@/stores/family';
 import { updateProfile, updatePassword } from '@/api/auth';
+import { getFamily, getMembers } from '@/api/family';
+import { formatGestationalAge } from '@/utils/date';
+import UserAvatar from '@/components/UserAvatar.vue';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const familyStore = useFamilyStore();
 
 const profileFormRef = ref(null);
 const passwordFormRef = ref(null);
 const profileLoading = ref(false);
 const passwordLoading = ref(false);
+const familyLoading = ref(false);
+const members = ref([]);
+
 const isOwner = computed(() => authStore.isOwner);
+const displayName = computed(() => authStore.user?.profile?.nickname || authStore.user?.username || '');
+
+const gestationalAgeText = computed(() => {
+  const age = familyStore.currentGestationalAge;
+  if (!age) return '未设置';
+  return formatGestationalAge(age.weeks, age.days);
+});
+
+const nextCheckupText = computed(() => {
+  const date = familyStore.nextCheckupDate;
+  if (!date) return '未设置';
+  return dayjs(date).format('YYYY年M月D日');
+});
 
 const profileForm = reactive({
   nickname: '',
@@ -133,6 +213,23 @@ const passwordRules = {
     { required: true, message: '请确认新密码', trigger: 'blur' },
     { validator: validateConfirmPassword, trigger: 'blur' },
   ],
+};
+
+const loadFamilyData = async () => {
+  familyLoading.value = true;
+  try {
+    const [familyRes, membersRes] = await Promise.all([getFamily(), getMembers()]);
+    if (familyRes.success) {
+      familyStore.setFamily(familyRes.data);
+    }
+    if (membersRes.success) {
+      members.value = membersRes.data;
+    }
+  } catch (error) {
+    console.error('加载家庭信息失败:', error);
+  } finally {
+    familyLoading.value = false;
+  }
 };
 
 const goToFamilySettings = () => {
@@ -182,8 +279,23 @@ const handleChangePassword = async () => {
   }
 };
 
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '退出登录', {
+      confirmButtonText: '退出',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+    authStore.logout();
+    router.push({ name: 'Login' });
+  } catch {
+    // 用户取消
+  }
+};
+
 onMounted(() => {
   profileForm.nickname = authStore.user?.profile?.nickname || authStore.user?.username || '';
+  loadFamilyData();
 });
 </script>
 
@@ -202,15 +314,90 @@ onMounted(() => {
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
-.card-header {
-  margin-bottom: 16px;
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
-.title {
-  font-size: 1.5rem;
+.profile-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.nickname {
+  font-size: 1.25rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0 0 6px;
   color: var(--color-text-primary, #1F2421);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-loading {
+  margin-bottom: var(--spacing-lg);
+}
+
+.family-summary {
+  margin-bottom: var(--spacing-md);
+}
+
+.summary-grid {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.summary-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.members-section {
+  margin-bottom: var(--spacing-md);
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 8px 12px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.member-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .quick-links {
@@ -219,5 +406,12 @@ onMounted(() => {
 
 .profile-form {
   margin-bottom: 8px;
+}
+
+.logout-section {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
 }
 </style>

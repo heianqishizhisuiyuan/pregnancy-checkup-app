@@ -27,7 +27,11 @@
             :prefix-icon="Key"
             maxlength="12"
             @input="formData.inviteCode = formData.inviteCode.toUpperCase()"
+            @blur="handleInviteCodeBlur"
           />
+          <div v-if="inviteValidation.message" :class="['invite-hint', inviteValidation.status]">
+            {{ inviteValidation.message }}
+          </div>
         </el-form-item>
 
         <el-form-item prop="username">
@@ -116,7 +120,7 @@ import { ref, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Key, Lock, Message, Star, User } from '@element-plus/icons-vue';
-import { register as registerApi } from '@/api/auth';
+import { register as registerApi, validateInviteCode } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { validateEmail, validateUsername, validatePassword } from '@/utils/validators';
 
@@ -126,7 +130,12 @@ const authStore = useAuthStore();
 
 const formRef = ref(null);
 const loading = ref(false);
+const inviteValidating = ref(false);
 const registerMode = ref(route.query.invite ? 'join' : 'create');
+const inviteValidation = reactive({
+  status: '',
+  message: '',
+});
 
 const formData = reactive({
   username: '',
@@ -184,6 +193,28 @@ const rules = computed(() => ({
     },
   ],
 }));
+
+const handleInviteCodeBlur = async () => {
+  const code = formData.inviteCode.trim();
+  inviteValidation.status = '';
+  inviteValidation.message = '';
+
+  if (!code) return;
+
+  inviteValidating.value = true;
+  try {
+    const response = await validateInviteCode(code);
+    if (response.success) {
+      inviteValidation.status = 'success';
+      inviteValidation.message = `邀请码有效，将加入「${response.data.familyName}」`;
+    }
+  } catch (error) {
+    inviteValidation.status = 'error';
+    inviteValidation.message = error?.response?.data?.error?.message || '邀请码无效，请检查后重试';
+  } finally {
+    inviteValidating.value = false;
+  }
+};
 
 const handleSubmit = async () => {
   try {
@@ -291,5 +322,19 @@ const handleSubmit = async () => {
 
 .link:hover {
   color: var(--color-accent-hover);
+}
+
+.invite-hint {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.invite-hint.success {
+  color: #16a34a;
+}
+
+.invite-hint.error {
+  color: #dc2626;
 }
 </style>

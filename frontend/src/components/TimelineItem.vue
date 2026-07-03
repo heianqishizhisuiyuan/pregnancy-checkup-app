@@ -36,6 +36,12 @@
               胎心 {{ record.vitals.fetalHeartRate }}次/分
             </span>
           </div>
+
+          <RecordCardThumbnails
+            v-if="previewAttachments.length"
+            :attachments="previewAttachments"
+            :total-count="attachmentCount"
+          />
         </div>
       </div>
     </div>
@@ -45,6 +51,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Picture } from '@element-plus/icons-vue';
+import RecordCardThumbnails from '@/components/RecordCardThumbnails.vue';
 import dayjs from 'dayjs';
 
 const props = defineProps({
@@ -59,6 +66,8 @@ const emit = defineEmits(['click']);
 const attachmentCount = computed(() => {
   return props.record.attachmentCount ?? props.record.attachments?.length ?? 0;
 });
+
+const previewAttachments = computed(() => props.record.previewAttachments || []);
 
 const formatDate = (date) => {
   return dayjs(date).format('YYYY-MM-DD');

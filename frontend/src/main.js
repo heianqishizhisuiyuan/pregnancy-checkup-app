@@ -18,7 +18,9 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   });
 }
 
-dayjs.locale('zh-cn');
+import { initTheme } from './composables/useTheme.js';
+
+initTheme();
 
 const app = createApp(App);
 const pinia = createPinia();

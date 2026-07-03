@@ -26,6 +26,13 @@ describe('buildVitalChartSeries', () => {
     assert.equal(result.labels[0], '04-01');
     assert.equal(result.meta[0].gestational, '12周+3天');
   });
+
+  it('includes recordId in meta', () => {
+    const result = buildVitalChartSeries([
+      { _id: 'abc123', checkupDate: '2026-04-01', gestationalWeek: 12, gestationalDay: 0, vitals: {} },
+    ]);
+    assert.equal(result.meta[0].recordId, 'abc123');
+  });
 });
 
 describe('buildChartAxisLabels', () => {

@@ -22,6 +22,38 @@
           title="您为只读家人，可查看记录但无法编辑"
         />
 
+        <nav v-if="navigationList.length > 1" class="record-nav">
+          <el-button
+            :disabled="!hasPrev"
+            text
+            @click="goToAdjacent(-1)"
+          >
+            <el-icon><ArrowLeft /></el-icon>
+            上一条
+          </el-button>
+          <span class="nav-position">{{ navPosition }}</span>
+          <el-button
+            :disabled="!hasNext"
+            text
+            @click="goToAdjacent(1)"
+          >
+            下一条
+            <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </nav>
+
+        <div v-if="sameWeekRecords.length > 0" class="same-week-links">
+          <span class="same-week-label">同孕周记录：</span>
+          <router-link
+            v-for="item in sameWeekRecords"
+            :key="item._id"
+            :to="{ name: 'RecordDetail', params: { id: item._id } }"
+            class="same-week-link"
+          >
+            {{ formatDate(item.checkupDate, 'MM月DD日') }}
+          </router-link>
+        </div>
+
         <!-- 基本信息卡片 -->
         <div class="info-card">
           <div class="card-header">
@@ -168,11 +200,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { ArrowLeft, Edit, Delete, Odometer, TrendCharts, Compass, Crop, DataLine } from '@element-plus/icons-vue';
-import { getRecordById, deleteRecord as deleteRecordApi } from '@/api/record';
+import { ArrowLeft, ArrowRight, Edit, Delete, Odometer, TrendCharts, Compass, Crop, DataLine } from '@element-plus/icons-vue';
+import { getRecordById, getRecords, deleteRecord as deleteRecordApi } from '@/api/record';
 import { useAuthStore } from '@/stores/auth';
 import { useRecordStore } from '@/stores/record';
 import { formatDate, formatGestationalAge } from '@/utils/date';
@@ -186,7 +218,31 @@ const recordStore = useRecordStore();
 
 const loading = ref(false);
 const record = ref(null);
+const navigationList = ref([]);
 const recordId = computed(() => route.params.id);
+
+const currentNavIndex = computed(() =>
+  navigationList.value.findIndex((item) => item._id === recordId.value)
+);
+
+const hasPrev = computed(() => currentNavIndex.value > 0);
+const hasNext = computed(() =>
+  currentNavIndex.value >= 0 && currentNavIndex.value < navigationList.value.length - 1
+);
+
+const navPosition = computed(() => {
+  if (currentNavIndex.value < 0 || navigationList.value.length === 0) return '';
+  return `${currentNavIndex.value + 1} / ${navigationList.value.length}`;
+});
+
+const sameWeekRecords = computed(() => {
+  if (!record.value) return [];
+  return navigationList.value.filter(
+    (item) =>
+      item._id !== recordId.value &&
+      item.gestationalWeek === record.value.gestationalWeek
+  );
+});
 
 const isOwner = computed(() => authStore.isOwner);
 
@@ -207,6 +263,30 @@ const hasVitals = computed(() => {
 
 const goToTrends = () => {
   router.push({ name: 'Trends' });
+};
+
+const goToAdjacent = (delta) => {
+  const index = currentNavIndex.value + delta;
+  const target = navigationList.value[index];
+  if (target) {
+    router.push({ name: 'RecordDetail', params: { id: target._id } });
+  }
+};
+
+const loadNavigationList = async () => {
+  try {
+    const response = await getRecords();
+    if (response.success) {
+      navigationList.value = response.data.map((item) => ({
+        _id: item._id,
+        checkupDate: item.checkupDate,
+        gestationalWeek: item.gestationalWeek,
+        gestationalDay: item.gestationalDay,
+      }));
+    }
+  } catch (error) {
+    console.error('Failed to load navigation list:', error);
+  }
 };
 
 // 加载记录
@@ -264,6 +344,11 @@ const handleBack = () => {
 
 onMounted(() => {
   refreshRecord();
+  loadNavigationList();
+});
+
+watch(recordId, () => {
+  refreshRecord();
 });
 </script>
 
@@ -307,6 +392,45 @@ onMounted(() => {
 
 .readonly-alert {
   margin-bottom: 0;
+}
+
+.record-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.nav-position {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.same-week-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.same-week-label {
+  color: var(--color-text-secondary);
+}
+
+.same-week-link {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.same-week-link:hover {
+  text-decoration: underline;
 }
 
 /* 卡片通用样式 */

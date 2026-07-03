@@ -1,6 +1,18 @@
 <template>
   <div class="home-container">
-    <main class="main-content">
+    <main ref="homeContainerRef" class="main-content">
+      <div
+        class="pull-refresh-indicator"
+        :style="{
+          height: pullDistance ? `${pullDistance}px` : pulling ? '40px' : '0',
+          overflow: 'hidden',
+        }"
+      >
+        <template v-if="pulling">刷新中...</template>
+        <template v-else-if="pullDistance >= 72">释放刷新</template>
+        <template v-else-if="pullDistance > 0">下拉刷新</template>
+      </div>
+
       <!-- 快速统计卡片 -->
       <StatsCardsSkeleton v-if="loading" />
       <div v-else class="stats-section">
@@ -38,6 +50,7 @@
       <CheckupReminderCard
         v-if="!loading"
         :next-checkup-date="familyStore.nextCheckupDate"
+        :last-period="familyStore.family?.pregnancyInfo?.lastPeriod"
         :reminder-days-before="familyStore.reminderDaysBefore"
         :is-owner="isOwner"
       />
@@ -51,7 +64,7 @@
       <!-- 记录列表 -->
       <div class="records-section">
         <div class="section-header">
-          <h2 class="section-title">产检记录</h2>
+          <h2 class="section-title font-serif">产检记录</h2>
           <div class="section-actions">
             <span class="record-count">
               {{ recordCountText }}
@@ -95,6 +108,8 @@
           <RecordCard
             v-for="(record, index) in records"
             :key="record._id"
+            class="list-animate-item"
+            :style="{ animationDelay: `${index * 0.05}s` }"
             :record="record"
             :is-latest="!hasActiveFilter && currentPage === 1 && index === 0"
           />
@@ -131,8 +146,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import {
   Plus, Female, Calendar, Document,
@@ -151,12 +166,19 @@ import { getRecords } from '@/api/record';
 import { getFamily } from '@/api/family';
 import { formatGestationalAge } from '@/utils/date';
 import { exportRecordsToExcel, exportRecordsToPdf } from '@/utils/exportRecords';
+import {
+  loadHomeState, saveHomeState, filtersToQuery, queryToFilters,
+} from '@/utils/homeState';
+import { buildExportFilename } from '@/utils/exportFilename';
+import { usePullToRefresh } from '@/composables/usePullToRefresh';
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const recordStore = useRecordStore();
 const familyStore = useFamilyStore();
 
+const homeContainerRef = ref(null);
 const loading = ref(false);
 const isNarrowScreen = ref(false);
 const filters = ref({});
@@ -220,15 +242,23 @@ const loadRecords = async (params = {}, page = currentPage.value) => {
 const loadData = async () => {
   loading.value = true;
   try {
-    const [recordsRes, familyRes] = await Promise.all([
-      getRecords({ page: currentPage.value, limit: pageSize.value }),
+    const [recordsRes, familyRes, totalRes] = await Promise.all([
+      getRecords({
+        ...filters.value,
+        page: currentPage.value,
+        limit: pageSize.value,
+      }),
       getFamily(),
+      getRecords({ page: 1, limit: 1 }),
     ]);
 
     if (recordsRes.success) {
       recordStore.setRecords(recordsRes.data);
       totalRecords.value = recordsRes.pagination?.total ?? recordsRes.data.length;
-      totalRecordCount.value = totalRecords.value;
+    }
+
+    if (totalRes.success) {
+      totalRecordCount.value = totalRes.pagination?.total ?? 0;
     }
 
     if (familyRes.success) {
@@ -241,6 +271,52 @@ const loadData = async () => {
     loading.value = false;
   }
 };
+
+const { pulling, pullDistance } = usePullToRefresh(homeContainerRef, loadData);
+
+let isSyncingRoute = false;
+
+const FILTER_QUERY_KEYS = ['keyword', 'hospital', 'startDate', 'endDate', 'minWeek', 'maxWeek'];
+
+function filterQueriesEqual(a, b) {
+  return FILTER_QUERY_KEYS.every((key) => String(a[key] || '') === String(b[key] || ''));
+}
+
+/** 持久化筛选/分页状态到 sessionStorage，并同步 URL query */
+function persistState() {
+  saveHomeState({
+    filters: filters.value,
+    currentPage: currentPage.value,
+    pageSize: pageSize.value,
+    filterExpanded: filterExpanded.value,
+  });
+
+  const newQuery = filtersToQuery(filters.value);
+  if (!filterQueriesEqual(newQuery, route.query)) {
+    isSyncingRoute = true;
+    router.replace({ query: newQuery }).finally(() => {
+      isSyncingRoute = false;
+    });
+  }
+}
+
+/** 从 sessionStorage 或 URL query 恢复首页状态 */
+function restoreState() {
+  const saved = loadHomeState();
+  if (saved) {
+    filters.value = saved.filters || {};
+    currentPage.value = saved.currentPage || 1;
+    pageSize.value = saved.pageSize || 20;
+    filterExpanded.value = !!saved.filterExpanded;
+    return;
+  }
+
+  const fromQuery = queryToFilters(route.query);
+  if (Object.keys(fromQuery).length > 0) {
+    filters.value = fromQuery;
+    filterExpanded.value = true;
+  }
+}
 
 const handleSearch = (params) => {
   currentPage.value = 1;
@@ -258,7 +334,7 @@ const handlePageSizeChange = () => {
 
 const handleExport = async (command) => {
   const familyName = familyStore.family?.name || '';
-  const filename = `产检记录_${new Date().toISOString().slice(0, 10)}`;
+  const filename = buildExportFilename(filters.value);
 
   try {
     const exportRes = await getRecords(filters.value);
@@ -287,6 +363,32 @@ const handleAddRecord = () => {
 let narrowMediaQuery;
 let updateNarrowScreen;
 
+watch(filters, () => persistState(), { deep: true });
+watch(currentPage, () => persistState());
+watch(pageSize, () => persistState());
+watch(filterExpanded, () => persistState());
+
+watch(
+  () => route.query,
+  (query) => {
+    if (isSyncingRoute) return;
+    const fromQuery = queryToFilters(query);
+    if (filterQueriesEqual(filtersToQuery(filters.value), fromQuery)) return;
+    filters.value = fromQuery;
+    if (Object.keys(fromQuery).length > 0) {
+      filterExpanded.value = true;
+    }
+    currentPage.value = 1;
+    loadRecords(fromQuery, 1);
+    saveHomeState({
+      filters: filters.value,
+      currentPage: currentPage.value,
+      pageSize: pageSize.value,
+      filterExpanded: filterExpanded.value,
+    });
+  },
+);
+
 onMounted(() => {
   narrowMediaQuery = window.matchMedia('(max-width: 640px)');
   updateNarrowScreen = (event) => {
@@ -295,6 +397,8 @@ onMounted(() => {
   isNarrowScreen.value = narrowMediaQuery.matches;
   narrowMediaQuery.addEventListener('change', updateNarrowScreen);
 
+  restoreState();
+  persistState();
   loadData();
 });
 

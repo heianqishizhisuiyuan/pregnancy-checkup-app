@@ -45,19 +45,41 @@
             placeholder="天数（0-6）"
             style="width: 100%"
           />
+          <div v-if="gestationalText" class="form-tip">{{ gestationalText }}</div>
         </el-form-item>
 
+        <el-alert
+          v-if="checkupGuide"
+          type="info"
+          :closable="false"
+          show-icon
+          class="checkup-guide-alert"
+        >
+          <template #title>
+            第 {{ formData.gestationalWeek }} 周常见检查项目（仅供参考）
+          </template>
+          <ul class="checkup-guide-list">
+            <li v-for="item in checkupGuide.items" :key="item">{{ item }}</li>
+          </ul>
+        </el-alert>
+
         <el-form-item label="医院" prop="hospital">
-          <el-input
+          <el-autocomplete
             v-model="formData.hospital"
+            :fetch-suggestions="queryHospital"
             placeholder="医院名称"
+            style="width: 100%"
+            clearable
           />
         </el-form-item>
 
         <el-form-item label="医生" prop="doctor">
-          <el-input
+          <el-autocomplete
             v-model="formData.doctor"
+            :fetch-suggestions="queryDoctor"
             placeholder="医生姓名"
+            style="width: 100%"
+            clearable
           />
         </el-form-item>
 
@@ -99,6 +121,7 @@
             </el-form-item>
             <span style="margin-left: 8px;">mmHg</span>
           </div>
+          <div class="form-tip">{{ getVitalHint('bloodPressure') }}</div>
         </el-form-item>
 
         <el-form-item label="宫高" prop="vitals.fundalHeight">
@@ -137,6 +160,7 @@
           >
             <template #append>次/分</template>
           </el-input-number>
+          <div class="form-tip">{{ getVitalHint('fetalHeartRate') }}</div>
         </el-form-item>
 
         <el-form-item label="备注" prop="notes">
@@ -200,14 +224,18 @@ import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
 import { uploadAttachmentEntry } from '@/api/attachment';
-import { createRecord, updateRecord, getRecordById } from '@/api/record';
+import { createRecord, updateRecord, getRecordById, getRecords } from '@/api/record';
 import { getFamily } from '@/api/family';
 import AttachmentGallery from '@/components/AttachmentGallery.vue';
 import AttachmentUpload from '@/components/AttachmentUpload.vue';
+import { useFormGuard } from '@/composables/useFormGuard';
 import { useRecordStore } from '@/stores/record';
 import { useFamilyStore } from '@/stores/family';
 import { uploadQueuedAttachments } from '@/utils/attachmentQueue';
+import { getCheckupGuideForWeek } from '@/utils/checkupGuide';
 import { calculateGestationalAge, formatDate } from '@/utils/date';
+import { extractSuggestions, filterSuggestions } from '@/utils/recordSuggestions';
+import { getVitalHint } from '@/utils/vitalRanges';
 
 const router = useRouter();
 const route = useRoute();
@@ -219,8 +247,51 @@ const loading = ref(false);
 const pendingAttachments = ref([]);
 const currentRecordId = ref(route.params.id || '');
 const recordAttachments = ref([]);
+const initialFormSnapshot = ref('');
+const hospitalSuggestions = ref([]);
+const doctorSuggestions = ref([]);
 
 const isEditMode = computed(() => !!route.params.id);
+
+const gestationalText = computed(() => {
+  const week = formData.gestationalWeek;
+  const day = formData.gestationalDay;
+  if (week == null) return '';
+  return `${week}周+${day ?? 0}天`;
+});
+
+const checkupGuide = computed(() => getCheckupGuideForWeek(formData.gestationalWeek));
+
+const buildFormSnapshot = () => JSON.stringify({
+  checkupDate: formData.checkupDate,
+  gestationalWeek: formData.gestationalWeek,
+  gestationalDay: formData.gestationalDay,
+  hospital: formData.hospital,
+  doctor: formData.doctor,
+  vitals: {
+    weight: formData.vitals.weight,
+    bloodPressure: {
+      systolic: formData.vitals.bloodPressure.systolic,
+      diastolic: formData.vitals.bloodPressure.diastolic,
+    },
+    fundalHeight: formData.vitals.fundalHeight,
+    abdominalCircumference: formData.vitals.abdominalCircumference,
+    fetalHeartRate: formData.vitals.fetalHeartRate,
+  },
+  notes: formData.notes,
+  pendingAttachments: pendingAttachments.value,
+});
+
+const isDirty = computed(() => {
+  if (!initialFormSnapshot.value) return false;
+  return buildFormSnapshot() !== initialFormSnapshot.value;
+});
+
+const { disableGuard, confirmLeave } = useFormGuard(() => isDirty.value);
+
+const captureFormSnapshot = () => {
+  initialFormSnapshot.value = buildFormSnapshot();
+};
 
 const formData = reactive({
   checkupDate: '',
@@ -289,6 +360,28 @@ const fetchRecord = async () => {
   return getRecordById(route.params.id);
 };
 
+// 加载医院、医生历史建议
+const loadSuggestions = async () => {
+  try {
+    const response = await getRecords({ limit: 100 });
+    if (response.success) {
+      const { hospitals, doctors } = extractSuggestions(response.data || []);
+      hospitalSuggestions.value = hospitals;
+      doctorSuggestions.value = doctors;
+    }
+  } catch (error) {
+    console.error('Failed to load suggestions:', error);
+  }
+};
+
+const queryHospital = (queryString, cb) => {
+  cb(filterSuggestions(hospitalSuggestions.value, queryString).map((value) => ({ value })));
+};
+
+const queryDoctor = (queryString, cb) => {
+  cb(filterSuggestions(doctorSuggestions.value, queryString).map((value) => ({ value })));
+};
+
 // 加载记录数据（编辑模式）
 const loadRecord = async () => {
   if (!isEditMode.value) return;
@@ -339,6 +432,7 @@ const handleSubmit = async () => {
     }
 
     if (response.success) {
+      disableGuard();
       ElMessage.success(isEditMode.value ? '修改成功' : '创建成功');
       if (isEditMode.value) {
         recordStore.updateRecord(route.params.id, response.data);
@@ -373,9 +467,10 @@ const handleSubmit = async () => {
   }
 };
 
-// 返回
-const handleBack = () => {
-  router.back();
+// 返回（未保存时确认离开）
+const handleBack = async () => {
+  const ok = await confirmLeave();
+  if (ok) router.back();
 };
 
 const applyGestationalFromDate = (dateStr) => {
@@ -415,12 +510,14 @@ watch(
   }
 );
 
-onMounted(() => {
+onMounted(async () => {
+  loadSuggestions();
   if (isEditMode.value) {
-    loadRecord();
+    await loadRecord();
   } else {
-    initNewRecord();
+    await initNewRecord();
   }
+  captureFormSnapshot();
 });
 </script>
 
@@ -472,5 +569,20 @@ onMounted(() => {
   border-radius: var(--radius-full);
   font-weight: 500;
   min-width: 120px;
+}
+
+.form-tip {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.checkup-guide-alert {
+  margin-bottom: var(--spacing-lg);
+}
+
+.checkup-guide-list {
+  margin: var(--spacing-xs) 0 0;
+  padding-left: 1.25rem;
 }
 </style>

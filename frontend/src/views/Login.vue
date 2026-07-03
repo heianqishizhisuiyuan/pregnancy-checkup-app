@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Lock, Message } from '@element-plus/icons-vue';
@@ -65,12 +65,21 @@ import { validateEmail } from '@/utils/validators';
 const router = useRouter();
 const authStore = useAuthStore();
 
+const REMEMBERED_EMAIL_KEY = 'pregnancy_remembered_email';
+
 const formRef = ref(null);
 const loading = ref(false);
 
 const formData = reactive({
   email: '',
   password: '',
+});
+
+onMounted(() => {
+  const remembered = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+  if (remembered) {
+    formData.email = remembered;
+  }
 });
 
 const rules = {
@@ -101,6 +110,7 @@ const handleSubmit = async () => {
     const response = await loginApi(formData);
 
     if (response.success) {
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, formData.email.trim());
       authStore.login(response.data);
       ElMessage.success('登录成功');
       router.push({ name: 'Home' });
