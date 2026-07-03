@@ -4,7 +4,7 @@
       <el-icon><Warning /></el-icon>
       <div class="offline-text">
         <strong>当前离线</strong>
-        <span>可浏览已缓存页面；新建/编辑记录、上传图片、导出数据需联网</span>
+        <span>请连接网络后使用；新建/编辑记录、上传图片、导出数据均需联网</span>
       </div>
     </div>
   </Transition>

@@ -8,11 +8,11 @@ import 'element-plus/dist/index.css';
 import './assets/styles/theme.css';
 import App from './App.vue';
 import router from './router';
-import { initPwaUpdate } from './composables/usePwaUpdate.js';
-
-initPwaUpdate();
-
 import { initTheme } from './composables/useTheme.js';
+import { unregisterServiceWorkers } from './utils/unregisterServiceWorkers.js';
+
+// 移除历史 PWA Service Worker，避免旧缓存继续生效
+unregisterServiceWorkers();
 
 initTheme();
 

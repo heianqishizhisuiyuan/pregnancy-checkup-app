@@ -17,7 +17,7 @@
       <div class="offline-info">
         <div class="offline-info-title">离线说明</div>
         <p class="offline-info-text">
-          安装到主屏幕后，弱网下可打开已访问过的页面；附件图片与实时数据需联网加载。
+          可添加到主屏幕快捷访问；所有数据需联网加载，离线时无法使用。
         </p>
       </div>
 
