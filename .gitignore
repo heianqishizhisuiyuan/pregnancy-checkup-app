@@ -47,6 +47,7 @@ Desktop.ini
 # Claude
 .claude/
 .superpowers/
+.worktrees/
 
 # PM2
 ecosystem.config.js
