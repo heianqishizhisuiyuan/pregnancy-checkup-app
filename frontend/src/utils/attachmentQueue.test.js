@@ -2,16 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createQueuedAttachmentEntry, uploadQueuedAttachments } from './attachmentQueue.js';
 
-test('createQueuedAttachmentEntry applies defaults and overrides', () => {
-  const file = { name: 'report-a.png', size: 1024, lastModified: 12345 };
-
-  assert.deepEqual(createQueuedAttachmentEntry(file), {
-    id: 'report-a.png-1024-12345',
-    file,
-    category: '其他',
-    tags: [],
-    status: 'queued'
+test('createQueuedAttachmentEntry defaults to category 其他 and queued status', () => {
+  const entry = createQueuedAttachmentEntry({
+    name: 'report.png',
+    size: 100,
+    lastModified: 1
   });
+
+  assert.equal(entry.category, '其他');
+  assert.deepEqual(entry.tags, []);
+  assert.equal(entry.status, 'queued');
+});
+
+test('createQueuedAttachmentEntry applies overrides', () => {
+  const file = { name: 'report-a.png', size: 1024, lastModified: 12345 };
 
   assert.deepEqual(
     createQueuedAttachmentEntry(file, {

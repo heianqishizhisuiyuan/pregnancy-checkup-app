@@ -26,15 +26,25 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
+import { createQueuedAttachmentEntry } from '@/utils/attachmentQueue';
+import { buildAttachmentUploadUrl } from '@/utils/attachmentUrls';
 
 const props = defineProps({
+  mode: {
+    type: String,
+    default: 'upload'
+  },
   recordId: {
     type: String,
-    required: true
+    default: ''
+  },
+  queueItems: {
+    type: Array,
+    default: () => []
   },
   existingCount: {
     type: Number,
@@ -54,30 +64,29 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['success']);
+const emit = defineEmits([
+  'success',
+  'queue-change'
+]);
 
 const authStore = useAuthStore();
 const uploadRef = ref(null);
 const fileList = ref([]);
 
-// 计算还能上传多少张
 const maxCount = computed(() => {
   return Math.max(0, 20 - props.existingCount);
 });
 
-// 上传地址
 const uploadUrl = computed(() => {
-  return `${import.meta.env.VITE_API_BASE_URL}/api/records/${props.recordId}/attachments`;
+  return buildAttachmentUploadUrl(import.meta.env.VITE_API_BASE_URL, props.recordId);
 });
 
-// 上传请求头
 const uploadHeaders = computed(() => {
   return {
     Authorization: `Bearer ${authStore.token}`
   };
 });
 
-// 上传数据
 const uploadData = computed(() => {
   return {
     category: props.category,
@@ -85,7 +94,6 @@ const uploadData = computed(() => {
   };
 });
 
-// 上传前验证
 const beforeUpload = (file) => {
   const isImage = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type);
   if (!isImage) {
@@ -99,21 +107,36 @@ const beforeUpload = (file) => {
     return false;
   }
 
+  if (props.mode === 'queue') {
+    const selectedFiles = [file];
+    const nextQueue = [
+      ...props.queueItems,
+      ...selectedFiles.map((selectedFile) =>
+        createQueuedAttachmentEntry(selectedFile, {
+          category: props.category,
+          tags: [...props.tags]
+        })
+      )
+    ];
+    emit('queue-change', nextQueue);
+    fileList.value = [];
+    return false;
+  }
+
   return true;
 };
 
-// 上传成功
 const handleSuccess = (response) => {
   if (response.success) {
     ElMessage.success('上传成功');
     emit('success', response.data.attachments);
     fileList.value = [];
-  } else {
-    ElMessage.error(response.error?.message || '上传失败');
+    return;
   }
+
+  ElMessage.error(response.error?.message || '上传失败');
 };
 
-// 上传失败
 const handleError = (error) => {
   console.error('上传失败:', error);
   ElMessage.error('上传失败，请重试');
@@ -126,8 +149,8 @@ const handleError = (error) => {
 }
 
 .upload-tip {
+  margin-top: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  margin-top: 8px;
 }
 </style>

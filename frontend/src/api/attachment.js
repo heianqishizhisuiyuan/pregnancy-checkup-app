@@ -1,8 +1,5 @@
 import request from './request';
 
-/**
- * 上传附件
- */
 export function uploadAttachments(recordId, formData) {
   return request({
     url: `/records/${recordId}/attachments`,
@@ -14,9 +11,14 @@ export function uploadAttachments(recordId, formData) {
   });
 }
 
-/**
- * 删除附件
- */
+export function uploadAttachmentEntry(recordId, entry) {
+  const formData = new FormData();
+  formData.append('files', entry.file);
+  formData.append('category', entry.category);
+  formData.append('tags', JSON.stringify(entry.tags));
+  return uploadAttachments(recordId, formData);
+}
+
 export function deleteAttachment(recordId, attachmentId) {
   return request({
     url: `/records/${recordId}/attachments/${attachmentId}`,
@@ -24,9 +26,6 @@ export function deleteAttachment(recordId, attachmentId) {
   });
 }
 
-/**
- * 更新附件信息
- */
 export function updateAttachment(recordId, attachmentId, data) {
   return request({
     url: `/records/${recordId}/attachments/${attachmentId}`,

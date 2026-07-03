@@ -1,10 +1,10 @@
 export function createQueuedAttachmentEntry(file, overrides = {}) {
   return {
-    id: overrides.id || `${file.name}-${file.size}-${file.lastModified || 0}`,
+    id: overrides.id ?? `${file.name}-${file.size}-${file.lastModified || 0}`,
     file,
-    category: overrides.category || '其他',
-    tags: overrides.tags || [],
-    status: overrides.status || 'queued'
+    category: overrides.category ?? '其他',
+    tags: overrides.tags ?? [],
+    status: overrides.status ?? 'queued'
   };
 }
 
