@@ -1,3 +1,11 @@
+export const MAX_ATTACHMENTS = 20;
+
+export function assertAttachmentRecordId(recordId) {
+  if (!recordId || !recordId.trim()) {
+    throw new Error('recordId is required');
+  }
+}
+
 export function createQueuedAttachmentEntry(file, overrides = {}) {
   return {
     id: overrides.id ?? `${file.name}-${file.size}-${file.lastModified || 0}`,
@@ -13,6 +21,10 @@ export function appendQueuedAttachmentEntries(queue, files, overrides = {}) {
     ...queue,
     ...files.map((file) => createQueuedAttachmentEntry(file, overrides))
   ];
+}
+
+export function getRemainingAttachmentSlots(existingCount = 0, queuedCount = 0, maxAttachments = MAX_ATTACHMENTS) {
+  return Math.max(0, maxAttachments - existingCount - queuedCount);
 }
 
 export async function uploadQueuedAttachments({ recordId, queue, uploader }) {

@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   appendQueuedAttachmentEntries,
+  assertAttachmentRecordId,
   createQueuedAttachmentEntry,
+  getRemainingAttachmentSlots,
   uploadQueuedAttachments
 } from './attachmentQueue.js';
 
@@ -63,6 +65,18 @@ test('appendQueuedAttachmentEntries accumulates multiple selected files onto the
       ['first.png', '报告', ['new']],
       ['second.png', '报告', ['new']]
     ]
+  );
+});
+
+test('getRemainingAttachmentSlots subtracts queued items from the 20-attachment cap', () => {
+  assert.equal(getRemainingAttachmentSlots(3, 4), 13);
+  assert.equal(getRemainingAttachmentSlots(18, 3), 0);
+});
+
+test('assertAttachmentRecordId throws when recordId is missing', () => {
+  assert.throws(
+    () => assertAttachmentRecordId(''),
+    /recordId is required/
   );
 });
 

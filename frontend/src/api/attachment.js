@@ -1,6 +1,9 @@
-import request from './request';
+import request from './request.js';
+import { assertAttachmentRecordId } from '../utils/attachmentQueue.js';
 
 export function uploadAttachments(recordId, formData) {
+  assertAttachmentRecordId(recordId);
+
   return request({
     url: `/records/${recordId}/attachments`,
     method: 'post',
@@ -12,6 +15,8 @@ export function uploadAttachments(recordId, formData) {
 }
 
 export function uploadAttachmentEntry(recordId, entry) {
+  assertAttachmentRecordId(recordId);
+
   const formData = new FormData();
   formData.append('files', entry.file);
   formData.append('category', entry.category);
@@ -20,6 +25,8 @@ export function uploadAttachmentEntry(recordId, entry) {
 }
 
 export function deleteAttachment(recordId, attachmentId) {
+  assertAttachmentRecordId(recordId);
+
   return request({
     url: `/records/${recordId}/attachments/${attachmentId}`,
     method: 'delete'
@@ -27,6 +34,8 @@ export function deleteAttachment(recordId, attachmentId) {
 }
 
 export function updateAttachment(recordId, attachmentId, data) {
+  assertAttachmentRecordId(recordId);
+
   return request({
     url: `/records/${recordId}/attachments/${attachmentId}`,
     method: 'put',

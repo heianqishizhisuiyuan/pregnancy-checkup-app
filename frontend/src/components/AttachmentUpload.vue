@@ -30,7 +30,10 @@ import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
-import { appendQueuedAttachmentEntries } from '@/utils/attachmentQueue';
+import {
+  appendQueuedAttachmentEntries,
+  getRemainingAttachmentSlots
+} from '@/utils/attachmentQueue';
 import { buildAttachmentUploadUrl } from '@/utils/attachmentUrls';
 
 const props = defineProps({
@@ -81,11 +84,20 @@ watch(
   }
 );
 
+const hasRecordId = computed(() => {
+  return Boolean(props.recordId && props.recordId.trim());
+});
+
 const maxCount = computed(() => {
-  return Math.max(0, 20 - props.existingCount);
+  const queuedCount = props.mode === 'queue' ? pendingQueueItems.value.length : 0;
+  return getRemainingAttachmentSlots(props.existingCount, queuedCount);
 });
 
 const uploadUrl = computed(() => {
+  if (!hasRecordId.value) {
+    return '';
+  }
+
   return buildAttachmentUploadUrl(import.meta.env.VITE_API_BASE_URL, props.recordId);
 });
 
@@ -116,6 +128,11 @@ const beforeUpload = (file) => {
   }
 
   if (props.mode === 'queue') {
+    if (maxCount.value <= 0) {
+      ElMessage.error('附件最多只能上传 20 张');
+      return false;
+    }
+
     const nextQueue = appendQueuedAttachmentEntries(
       pendingQueueItems.value,
       [file],
@@ -127,6 +144,11 @@ const beforeUpload = (file) => {
     pendingQueueItems.value = nextQueue;
     emit('queue-change', nextQueue);
     fileList.value = [];
+    return false;
+  }
+
+  if (!hasRecordId.value) {
+    ElMessage.error('请先保存记录后再上传附件');
     return false;
   }
 
